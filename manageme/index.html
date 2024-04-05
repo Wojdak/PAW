@@ -16,8 +16,18 @@
       <button type="submit">Save Project</button>
     </form>
 
-    <div id="projects-list"></div>
+    <form id="story-form" style="display: none;">
+      <input type="hidden" id="story-id">
+      <input type="text" id="story-name" placeholder="Story Name" required>
+      <input id="story-description" placeholder="Story Description" required></input>
 
+      <button type="submit">Add Story</button>
+    </form>
+
+    <div id="projects-list"></div>
+    <div id="stories-list"></div>
+
+    
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
