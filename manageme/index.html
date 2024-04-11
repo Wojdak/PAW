@@ -7,27 +7,46 @@
     <title>ManageMe</title>
   </head>
   <body>
-    <h1>ManagMe</h1>
+    <a href="index.html"><h1>ManagMe</h1></a>
 
-    <form id="project-form">
-      <input type="hidden" id="project-id">
-      <input type="text" id="project-name" placeholder="Project Name" required>
-      <input id="project-description" placeholder="Project Description" required></input>
-      <button type="submit">Save Project</button>
-    </form>
+    <div id="project-section">
+      <form id="project-form">
+        <input type="hidden" id="project-id">
+        <input type="text" id="project-name" placeholder="Project Name" required>
+        <input id="project-description" placeholder="Project Description" required></input>
+        <button type="submit">Save Project</button>
+      </form>
 
-    <form id="story-form" style="display: none;">
-      <input type="hidden" id="story-id">
-      <input type="text" id="story-name" placeholder="Story Name" required>
-      <input id="story-description" placeholder="Story Description" required></input>
+      <div id="projects-list"></div>
+    </div>
 
-      <button type="submit">Add Story</button>
-    </form>
+    <div id="story-section" style="display: none;">
+      <form id="story-form">
+        <input type="hidden" id="story-id">
+        <input type="text" id="story-name" placeholder="Story Name" required>
+        <input id="story-description" placeholder="Story Description" required></input>
+        <select id="story-priority">
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+        </select>
+        <select id="story-status">
+            <option value="Todo">To Do</option>
+            <option value="Doing">Doing</option>
+            <option value="Done">Done</option>
+        </select>
+        <button type="submit">Save Story</button>
+      </form>
 
-    <div id="projects-list"></div>
-    <div id="stories-list"></div>
+      <select id="story-filter">
+        <option value="Todo">To Do</option>
+        <option value="Doing">Doing</option>
+        <option value="Done">Done</option>
+      </select>
 
-    
+      <div id="stories-list"></div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

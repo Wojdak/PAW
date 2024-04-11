@@ -1,10 +1,11 @@
-
 export class ActiveProjectService {
+    private static activeProjectId: string | null = null;
+
     static setActiveProjectId(projectId: string): void {
-        localStorage.setItem('activeProjectId', projectId);
+        this.activeProjectId = projectId;
     }
 
     static getActiveProjectId(): string | null {
-        return localStorage.getItem('activeProjectId');
+        return this.activeProjectId;
     }
 }

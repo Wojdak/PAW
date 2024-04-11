@@ -1,101 +1,144 @@
-import { v4 as uuidv4 } from 'uuid';
-import { ApiService } from '../api/ApiService';
-import { Story, Priority, Status } from '../models/StoryModel';
-import { ActiveProjectService } from '../api/ActiveProjectService';
-import { Project } from '../models/ProjectModel';
+// src/controllers/StoryController.ts
+import { v4 as uuidv4 } from "uuid";
+import { Story } from "../models/StoryModel";
+import { ApiService } from "../api/ApiService";
+import { ActiveProjectService } from "../api/ActiveProjectService";
+import { UserController } from "./UserController";
 
 export class StoryController {
-    private storageService: ApiService<Story>;
-    private projectService: ApiService<Project>;
+  private storyService: ApiService<Story>;
 
-    constructor() {
-        this.storageService = new ApiService<Story>('stories');
-        this.projectService = new ApiService<Story>('projects');
-        this.attachStoryFormListener();
+  constructor() {
+    this.storyService = new ApiService<Story>("stories");
+    this.attachEventListeners();
+    this.setupFilterChangeListener();
+  }
+
+  public renderStories() {
+    const projectId = ActiveProjectService.getActiveProjectId();
+    if (!projectId) return;
+
+    let stories = this.storyService.getAllItems().filter((story) => story.projectId === projectId);
+
+    // Filter stories by status
+    const filter = (document.getElementById("story-filter") as HTMLSelectElement)?.value;
+
+    if (filter) {
+      stories = stories.filter((story) => story.state === filter);
     }
 
-    private attachStoryFormListener() {
-        const storyForm = document.getElementById('story-form');
-        if (storyForm) {
-            storyForm.addEventListener('submit', (event) => this.saveStory(event));
-        }
-    }
+    const storiesList = document.getElementById("stories-list");
+    if (storiesList) {
+      storiesList.innerHTML = "";
 
-    public renderStories() {
-        const activeProjectId = ActiveProjectService.getActiveProjectId();
-        if (!activeProjectId) return;
-
-        const stories = this.storageService.getAllItems().filter(story => story.project.id === activeProjectId);
-        const storiesList = document.getElementById('stories-list');
-        if (storiesList) {
-            storiesList.innerHTML = '';
-
-            stories.forEach(story => {
-                const storyElement = document.createElement('div');
-                storyElement.innerHTML = `
+      stories.forEach((story) => {
+        const storyElement = document.createElement("div");
+        storyElement.innerHTML = `
                     <h4>${story.name}</h4>
                     <p>${story.description}</p>
                     <p>Priority: ${story.priority}</p>
-                    <p>Status: ${story.status}</p>
-                    <button onclick="storyController.editStory('${story.id}')">Edit</button>
-                    <button onclick="storyController.deleteStory('${story.id}')">Delete</button>
+                    <p>Status: ${story.state}</p>
+                    <p>Created: ${story.creationDate}</p>
                 `;
-                storiesList.appendChild(storyElement);
-            });
-        }
+
+        const editButton = document.createElement("button");
+        editButton.textContent = "Edit";
+        editButton.onclick = () => this.editStory(story.id);
+
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "Delete";
+        deleteButton.onclick = () => this.deleteStory(story.id);
+
+        storyElement.appendChild(editButton);
+        storyElement.appendChild(deleteButton);
+
+        storiesList.appendChild(storyElement);
+      });
+    }
+  }
+
+  public saveStory(event: Event) {
+    event.preventDefault();
+    const idInput = document.getElementById("story-id") as HTMLInputElement;
+    const nameInput = document.getElementById("story-name") as HTMLInputElement;
+    const descriptionInput = document.getElementById("story-description") as HTMLTextAreaElement;
+    const prioritySelect = document.getElementById("story-priority") as HTMLSelectElement;
+    const statusSelect = document.getElementById("story-status") as HTMLSelectElement;
+    const projectId = ActiveProjectService.getActiveProjectId() || "";
+
+    const story: Story = {
+      id: idInput.value || uuidv4(),
+      name: nameInput.value,
+      description: descriptionInput.value,
+      priority: prioritySelect.value as "Low" | "Medium" | "High",
+      projectId: projectId,
+      creationDate: new Date(),
+      state: statusSelect.value as "Todo" | "Doing" | "Done",
+      ownerId: this.getCurrentUser().id,
+    };
+
+    if (idInput.value) {
+      this.storyService.updateItem(story);
+    } else {
+      this.storyService.addItem(story);
     }
 
-    public saveStory(event: Event) {
-        event.preventDefault();
+    this.resetForm();
+    this.renderStories();
+  }
 
-        const nameInput = document.getElementById('story-name') as HTMLInputElement;
-        const descriptionInput = document.getElementById('story-description') as HTMLTextAreaElement;
-        const prioritySelect = document.getElementById('story-priority') as HTMLSelectElement;
-        const statusSelect = document.getElementById('story-status') as HTMLSelectElement;
-        const storyIdInput = document.getElementById('story-id') as HTMLInputElement;
-        const activeProjectId = ActiveProjectService.getActiveProjectId();
+  public editStory(id: string) {
+    const story = this.storyService.getItemById(id);
+    if (story) {
+      const idInput = document.getElementById("story-id") as HTMLInputElement;
+      const nameInput = document.getElementById("story-name") as HTMLInputElement;
+      const descriptionInput = document.getElementById("story-description") as HTMLTextAreaElement;
+      const prioritySelect = document.getElementById("story-priority") as HTMLSelectElement;
+      const statusSelect = document.getElementById("story-status") as HTMLSelectElement;
 
-        if (!activeProjectId) {
-            alert('No active project selected.');
-            return;
-        }
-
-        const activeProject = this.projectService.getItemById(activeProjectId)
-
-        const storyData: Story = {
-            id: storyIdInput.value || uuidv4(),
-            name: nameInput.value,
-            description: descriptionInput.value,
-            priority: prioritySelect.value as Priority,
-            status: statusSelect.value as Status,
-            creationDate: new Date(),
-            owner: { id: 'user-id', firstName: 'User Name', lastName: 'test' } 
-            ,
-            project: activeProject
-        };
-
-        if (storyIdInput.value) {
-            this.storageService.updateItem(storyData);
-        } else {
-            this.storageService.addItem(storyData);
-        }
-
-        this.resetForm();
-        this.renderStories();
+      idInput.value = story.id;
+      nameInput.value = story.name;
+      descriptionInput.value = story.description;
+      prioritySelect.value = story.priority;
+      statusSelect.value = story.state;
     }
+  }
 
-    public editStory(id: string) {
-        const story = this.storageService.getItemById(id);
-        if (story) {
-            (document.getElementById('story-id') as HTMLInputElement).value = story.id;
-            (document.getElementById('story-name') as HTMLInputElement).value = story.name;
-            (document.getElementById('story-description') as HTMLTextAreaElement).value = story.description;
-            (document.getElementById('story-priority') as HTMLSelectElement).value = story.priority;
-            (document.getElementById('story-status') as HTMLSelectElement).value = story.status;
-        }
-    }
+  public deleteStory(id: string) {
+    this.storyService.deleteItem(id);
+    this.renderStories();
+  }
 
-    private resetForm() {
-        const storyForm = document.getElementById('story-form');
+  //Helper methods
+  private resetForm() {
+    const idInput = document.getElementById("story-id") as HTMLInputElement;
+    const nameInput = document.getElementById("story-name") as HTMLInputElement;
+    const descriptionInput = document.getElementById("story-description") as HTMLTextAreaElement;
+    const prioritySelect = document.getElementById("story-priority") as HTMLSelectElement;
+    const statusSelect = document.getElementById("story-status") as HTMLSelectElement;
+
+    idInput.value = "";
+    nameInput.value = "";
+    descriptionInput.value = "";
+    prioritySelect.value = "Low";
+    statusSelect.value = "Todo";
+  }
+
+  private attachEventListeners() {
+    const storyForm = document.getElementById("story-form");
+    if (storyForm) {
+      storyForm.addEventListener("submit", (event) => this.saveStory(event));
     }
+  }
+
+  private setupFilterChangeListener() {
+    const filterDropdown = document.getElementById("story-filter") as HTMLSelectElement;
+    filterDropdown.addEventListener("change", () => {
+      this.renderStories();
+    });
+  }
+
+  private getCurrentUser() {
+    return UserController.getLoggedInUser();
+  }
 }
