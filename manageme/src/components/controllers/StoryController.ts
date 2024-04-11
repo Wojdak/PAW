@@ -2,11 +2,13 @@
 import { v4 as uuidv4 } from "uuid";
 import { Story } from "../models/StoryModel";
 import { ApiService } from "../api/ApiService";
-import { ActiveProjectService } from "../api/ActiveProjectService";
 import { UserController } from "./UserController";
+import { TaskController } from "./TaskController";
+
 
 export class StoryController {
   private storyService: ApiService<Story>;
+  private taskController = new TaskController();
 
   constructor() {
     this.storyService = new ApiService<Story>("stories");
@@ -15,10 +17,10 @@ export class StoryController {
   }
 
   public renderStories() {
-    const projectId = ActiveProjectService.getActiveProjectId();
+    const projectId = this.storyService.getActiveProjectId();
     if (!projectId) return;
 
-    let stories = this.storyService.getAllItems().filter((story) => story.projectId === projectId);
+    let stories = this.storyService.getAllItems().filter((story) => story.projectId == projectId);
 
     // Filter stories by status
     const filter = (document.getElementById("story-filter") as HTMLSelectElement)?.value;
@@ -49,9 +51,14 @@ export class StoryController {
         deleteButton.textContent = "Delete";
         deleteButton.onclick = () => this.deleteStory(story.id);
 
+        const selectButton = document.createElement("button");
+        selectButton.textContent = "Select";
+        selectButton.onclick = () => this.setActiveStory(story.id);
+
+        storyElement.appendChild(selectButton);
         storyElement.appendChild(editButton);
         storyElement.appendChild(deleteButton);
-
+        
         storiesList.appendChild(storyElement);
       });
     }
@@ -64,7 +71,7 @@ export class StoryController {
     const descriptionInput = document.getElementById("story-description") as HTMLTextAreaElement;
     const prioritySelect = document.getElementById("story-priority") as HTMLSelectElement;
     const statusSelect = document.getElementById("story-status") as HTMLSelectElement;
-    const projectId = ActiveProjectService.getActiveProjectId() || "";
+    const projectId = this.storyService.getActiveProjectId() || "";
 
     const story: Story = {
       id: idInput.value || uuidv4(),
@@ -109,7 +116,7 @@ export class StoryController {
     this.renderStories();
   }
 
-  //Helper methods
+  // Helper methods
   private resetForm() {
     const idInput = document.getElementById("story-id") as HTMLInputElement;
     const nameInput = document.getElementById("story-name") as HTMLInputElement;
@@ -141,4 +148,26 @@ export class StoryController {
   private getCurrentUser() {
     return UserController.getLoggedInUser();
   }
+
+  // Display Tasks
+  public setActiveStory(storyId: string): void {
+    this.storyService.setActiveStoryId(storyId);
+    this.toggleStoryVisibility(false);
+    this.taskController.renderTasks();
+    this.toggleTaskSection(true); 
+    
+  }
+
+  public toggleStoryVisibility(show: boolean) {
+    const storySection = document.getElementById("story-section");
+    if (storySection == null) return;
+    storySection.style.display = show ? "block" : "none";
+  }
+
+  public toggleTaskSection(show: boolean) {
+    const taskSection = document.getElementById("task-section");
+    if (taskSection == null) return;
+    taskSection.style.display = show ? "block" : "none";
+  }
+
 }

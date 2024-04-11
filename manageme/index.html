@@ -4,10 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./src/style.css">
     <title>ManageMe</title>
   </head>
   <body>
-    <a href="index.html"><h1>ManagMe</h1></a>
+    <a href="index.html"><h1 style="color: white;">ManageMe</h1></a>
 
     <div id="project-section">
       <form id="project-form">
@@ -45,6 +46,44 @@
       </select>
 
       <div id="stories-list"></div>
+    </div>
+
+    <div id="task-section" style="display: none;">
+      <form id="task-form">
+        <input type="hidden" id="task-id">
+        <input type="text" id="task-name" placeholder="Task Name" required>
+        <input id="task-description" placeholder="Task Description" required></input>
+        <select id="task-priority">
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+        </select>
+        <input type="hidden" id="story-id">
+        <input id="task-estimated-time" placeholder="Estimated Time (hours)">
+        <select id="task-status">
+            <option value="Todo">To Do</option>
+            <option value="Doing">Doing</option>
+            <option value="Done">Done</option>
+        </select>
+        <button type="submit">Save Task</button>
+      </form>
+
+      <div id="tasks-board" class="kanban-board">
+        <div id="tasks-todo" class="kanban-column">
+            <h3>To Do</h3>
+            <div class="tasks-list"></div>
+        </div>
+        <div id="tasks-doing" class="kanban-column">
+            <h3>Doing</h3>
+            <div class="tasks-list"></div>
+        </div>
+        <div id="tasks-done" class="kanban-column">
+            <h3>Done</h3>
+            <div class="tasks-list"></div>
+        </div>
+
+        <div id="task-details-container"></div>
+      </div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

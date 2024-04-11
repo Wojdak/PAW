@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { Project } from "../models/ProjectModel";
 import { ApiService } from "../api/ApiService";
-import { ActiveProjectService } from "../api/ActiveProjectService";
 import { StoryController } from "./StoryController";
 
 export class ProjectController {
@@ -24,7 +23,7 @@ export class ProjectController {
         const projectElement = document.createElement("div");
         projectElement.innerHTML = `
           <h3>${project.name}</h3>
-          <p>${project.description}</p>`;
+          <p>Description: ${project.description}</p>`;
 
         const editButton = document.createElement("button");
         editButton.textContent = "Edit";
@@ -89,7 +88,6 @@ export class ProjectController {
   }
 
   // Helper methods
-
   private resetForm() {
     const idInput = document.getElementById("project-id") as HTMLInputElement;
     const nameInput = document.getElementById("project-name") as HTMLInputElement;
@@ -111,7 +109,7 @@ export class ProjectController {
 
   // Seting active project and changing the UI
   public setActiveProject(id: string): void {
-    ActiveProjectService.setActiveProjectId(id);
+    this.storageService.setActiveProjectId(id);
     this.toggleProjectVisibility(false);
     this.storyController.renderStories();
     this.toggleStorySection(true);

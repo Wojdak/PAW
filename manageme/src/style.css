@@ -13,6 +13,11 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+body{
+  display: flex;
+  flex-direction: column;
+}
+
 a {
   font-weight: 500;
   color: black;
@@ -93,4 +98,50 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+.kanban-board {
+  display: flex;
+  justify-content: space-around;
+  padding: 20px;
+}
+
+.kanban-column {
+  flex: 1;
+  margin: 50px;
+  width: 200px;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.task-card {
+  background-color: #1a1a1a;
+  margin: 10px 0;
+  padding: 10px;
+  width: 300px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#project-form, #story-form, #task-form {
+  display: flex;
+  justify-content: center;
+}
+
+input, select {
+  margin: 5px
+}
+
+#task-details-container {
+  position: fixed;
+  color: black;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #c2c2c2;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  display: none;  
+  z-index: 1000;
 }

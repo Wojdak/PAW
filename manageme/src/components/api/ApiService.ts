@@ -31,4 +31,20 @@ export class ApiService<T extends Identifiable> {
         const items = this.getAllItems().filter((item: any) => item.id !== id);
         localStorage.setItem(this.storageKey, JSON.stringify(items));
     }
+
+    setActiveProjectId(projectId: string): void {
+        localStorage.setItem('activeProjectId', projectId);
+    }
+    
+    getActiveProjectId(): string | null {
+        return localStorage.getItem('activeProjectId');
+    }
+    
+    setActiveStoryId(storyId: string): void {
+        localStorage.setItem('activeStoryId', storyId);
+    }
+    
+    getActiveStoryId(): string | null {
+        return localStorage.getItem('activeStoryId');
+    }
 }
