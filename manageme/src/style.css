@@ -115,7 +115,7 @@ button:focus-visible {
 }
 
 .task-card {
-  background-color: #1a1a1a;
+  background-color: #c4c4c4;
   margin: 10px 0;
   padding: 10px;
   width: 300px;
@@ -144,4 +144,10 @@ input, select {
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   display: none;  
   z-index: 1000;
+}
+
+#login-button {
+  display: flex;
+  justify-content: end;
+  align-items: center;
 }
