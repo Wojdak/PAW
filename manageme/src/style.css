@@ -151,3 +151,13 @@ input, select {
   justify-content: end;
   align-items: center;
 }
+
+#user-info {
+  font-size: 1.5em;
+  margin-bottom: 1%;
+  color: white;
+}
+
+#username-display {
+  font-weight: bold;
+}

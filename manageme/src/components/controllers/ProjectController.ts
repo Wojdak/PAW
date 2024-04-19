@@ -47,6 +47,7 @@ export class ProjectController {
   }
 
   public saveProject(event: Event) {
+    console.log("Saving project");
     event.preventDefault();
 
     const idInput = document.getElementById("project-id") as HTMLInputElement;
@@ -100,10 +101,12 @@ export class ProjectController {
 
   private attachEventListeners() {
     const projectForm = document.getElementById("project-form");
+    console.log("Attaching event listener to project form");
     if (projectForm) {
-      projectForm.addEventListener("submit", (event) =>
-        this.saveProject(event)
-      );
+      projectForm.addEventListener("submit", (event) => {
+        console.log("Form submission triggered");
+        this.saveProject(event);
+    });
     }
   }
 

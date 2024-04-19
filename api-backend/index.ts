@@ -1,5 +1,6 @@
 import express from 'express'
 import jwt from 'jsonwebtoken'
+import { JwtPayload } from 'jsonwebtoken';
 import 'dotenv/config'
 import cors from 'cors'
 
@@ -18,49 +19,54 @@ app.get('/', (req,res)=>{
     res.send('test')
 })
 
-app.post('/login', (req,res) =>{
-    const username = req.body.username
-    console.log(username)
-    const password = req.body.password
-    console.log(password)
+app.post('/login', (req, res) => {
+    const username = req.body.username;
+    const password = req.body.password;
 
-    console.log(validateUser(username,password))
+    if (validateUser(username, password)) {
+        const token = generateToken(300, { username });
+        const refreshToken = generateToken(600, { username });
 
-    if(validateUser(username,password)){
-        const token = generateToken(3000)
-        res.status(200).send({token})   
+        res.status(200).send({ token, refreshToken });
     } else {
-        res.status(401).send("Wrong login details!")
+        res.status(401).send("Wrong login details!");
     }
-})
+});
 
-app.post('/register', (req,res)=>{
-    const username = req.body.username
-    const password = req.body.password
+app.post('/refresh-token', (req, res) => {
+    const refreshToken = req.body.refreshToken;
 
-    const newUser = {username: username, password: password}
+    if (!refreshToken) {
+        return res.status(401).send("Refresh token is required.");
+    }
 
-    users.push(newUser)
+    try {
+        const payload = jwt.verify(refreshToken, tokenSecret) as JwtPayload;
 
-    res.status(201).send("Successfully registered new user!")
-})
+        const newToken = generateToken(300, { username: payload.username });
+        const newRefreshToken = generateToken(600, { username: payload.username }); 
+        res.status(200).send({ newToken, newRefreshToken});
+    } catch (error) {
+        res.status(403).send("Token is invalid or expired.");
+    }
+});
 
 app.listen(port, () => {
     console.log(`API listening on port: ${port}`)
 })
 
-function validateUser(username:string, password: string){
-   users.forEach(user =>{
-    if(user.username==username && user.password==password){
-        return true
-    }
-   })
+function validateUser(username: string, password: string): boolean {
+    let isValidUser = false;  
+    users.forEach(user => {
+        if (user.username == username && user.password == password) {
+            isValidUser = true;  
+        }
+    });
 
-   return false
+    return isValidUser; 
 }
 
-function generateToken(expirationInSeconds: number) {
-    const exp = Math.floor(Date.now() / 1000) + expirationInSeconds
-    const token = jwt.sign({ exp, foo: 'bar' }, tokenSecret, { algorithm: 'HS256' })
-    return token
+function generateToken(expirationInSeconds: number, claims: object) {
+    const exp = Math.floor(Date.now() / 1000) + expirationInSeconds;
+    return jwt.sign({ exp, ...claims }, tokenSecret, { algorithm: 'HS256' });
 }
