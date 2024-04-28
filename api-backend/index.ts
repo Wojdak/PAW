@@ -111,7 +111,7 @@ app.get('/auth/google/callback',
     function(req, res) {
         req.session.user = req.user as User; 
         console.log(req.user);
-        res.redirect('/userinfo');
+        res.json(req.session.user);
 });
 
 app.get('/userinfo', (req, res) => {

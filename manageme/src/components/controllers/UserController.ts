@@ -49,6 +49,23 @@ export class UserController {
     this.updateUsernameDisplay();
   }
 
+  static async loginUserGoogle(event: Event){
+    event.preventDefault();
+    const response = await fetch('http://localhost:3000/auth/google', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to login');
+    }
+
+    const data = await response.json();
+    console.log('Login successful:', data);
+  }
+
   static toggleLoginFormVisibility(show: boolean) {
     const loginSection = document.getElementById("login-section");
     if (loginSection == null) return;

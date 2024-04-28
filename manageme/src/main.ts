@@ -1,27 +1,21 @@
 import { UserController } from './components/controllers/UserController';
 
 document.addEventListener('DOMContentLoaded', () => {
-  fetchUserInfo();
   const loginForm = document.getElementById('login-form') as HTMLFormElement;
   loginForm.addEventListener('submit', (event) => UserController.loginUser(event));
+
+  const googleLoginButton = document.getElementById('google-login-button') as HTMLButtonElement;
+  googleLoginButton.addEventListener('click', (event) => UserController.loginUserGoogle(event));
+
+  const themeToggle = document.getElementById('darkModeToggle') as HTMLFormElement;
+  const htmlElement = document.documentElement as HTMLFormElement;
+
+  themeToggle.addEventListener('change', function() {
+      if (this.checked) {
+          htmlElement.setAttribute('data-bs-theme', 'light');
+      } else {
+          htmlElement.setAttribute('data-bs-theme', 'dark');
+      }
+  });
 });
 
-function fetchUserInfo() {
-  fetch('http://localhost:3000/userinfo')
-      .then(response => response.json())
-      .then(user => {
-          if (user && user.username) {
-              updateUsernameDisplay(user.username);
-          }
-      })
-      .catch(error => {
-          console.error('Failed to fetch user info:', error);
-      });
-}
-
-function updateUsernameDisplay(username: string | null) {
-  const usernameDisplay = document.getElementById('username-display');
-  if (usernameDisplay) {
-      usernameDisplay.textContent = username;
-  }
-}
