@@ -20,49 +20,46 @@ export class StoryController {
     const projectId = this.storyService.getActiveProjectId();
     if (!projectId) return;
 
-    let stories = this.storyService.getAllItems().filter((story) => story.projectId == projectId);
+    let stories = this.storyService.getAllItems().filter((story) => story.projectId === projectId);
 
     // Filter stories by status
     const filter = (document.getElementById("story-filter") as HTMLSelectElement)?.value;
-
     if (filter) {
-      stories = stories.filter((story) => story.state === filter);
+        stories = stories.filter((story) => story.state === filter);
     }
 
     const storiesList = document.getElementById("stories-list");
     if (storiesList) {
-      storiesList.innerHTML = "";
+        storiesList.innerHTML = "";
 
-      stories.forEach((story) => {
-        const storyElement = document.createElement("div");
-        storyElement.innerHTML = `
-                    <h4>${story.name}</h4>
-                    <p>${story.description}</p>
-                    <p>Priority: ${story.priority}</p>
-                    <p>Status: ${story.state}</p>
-                    <p>Created: ${story.creationDate}</p>
-                `;
+        stories.forEach((story) => {
+            const storyElement = document.createElement("div");
+            storyElement.className = "card mb-3";
+            storyElement.innerHTML = `
+                <div class="card-body">
+                    <h5 class="card-title">${story.name}</h5>
+                    <p class="card-text">${story.description}</p>
+                    <p class="card-text"><small class="text-muted">Priority: ${story.priority}</small></p>
+                    <p class="card-text"><small class="text-muted">Status: ${story.state}</small></p>
+                    <p class="card-text"><small class="text-muted">Created: ${new Date(story.creationDate).toLocaleDateString()}</small></p>
+                    <button class="btn btn-secondary select-btn">Select</button>
+                    <button class="btn btn-primary edit-btn">Edit</button>
+                    <button class="btn btn-danger delete-btn">Delete</button>
+                </div>`;
 
-        const editButton = document.createElement("button");
-        editButton.textContent = "Edit";
-        editButton.onclick = () => this.editStory(story.id);
+            storiesList.appendChild(storyElement);
 
-        const deleteButton = document.createElement("button");
-        deleteButton.textContent = "Delete";
-        deleteButton.onclick = () => this.deleteStory(story.id);
+            // Attach event listeners to buttons
+            const editBtn = storyElement.querySelector(".edit-btn") as HTMLButtonElement;
+            const deleteBtn = storyElement.querySelector(".delete-btn") as HTMLButtonElement;
+            const selectBtn = storyElement.querySelector(".select-btn") as HTMLButtonElement;
 
-        const selectButton = document.createElement("button");
-        selectButton.textContent = "Select";
-        selectButton.onclick = () => this.setActiveStory(story.id);
-
-        storyElement.appendChild(selectButton);
-        storyElement.appendChild(editButton);
-        storyElement.appendChild(deleteButton);
-        
-        storiesList.appendChild(storyElement);
-      });
+            if (editBtn) editBtn.onclick = () => this.editStory(story.id);
+            if (deleteBtn) deleteBtn.onclick = () => this.deleteStory(story.id);
+            if (selectBtn) selectBtn.onclick = () => this.setActiveStory(story.id);
+        });
     }
-  }
+}
 
   public saveStory(event: Event) {
     event.preventDefault();

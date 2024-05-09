@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Task } from "../models/TaskModel";
 import { UserController } from "./UserController";
 import { ApiService } from "../api/ApiService";
+import * as bootstrap from "bootstrap";
 
 export class TaskController {
   private taskService: ApiService<Task>;
@@ -13,46 +14,41 @@ export class TaskController {
 
   public renderTasks() {
     const storyId = this.taskService.getActiveStoryId();
-    const tasks = this.taskService.getAllItems().filter((task) => task.storyId === storyId);
-    const todoList = document.getElementById("tasks-todo")?.querySelector(".tasks-list");
-    const doingList = document.getElementById("tasks-doing")?.querySelector(".tasks-list");
-    const doneList = document.getElementById("tasks-done")?.querySelector(".tasks-list");
+    const tasks = this.taskService
+      .getAllItems()
+      .filter((task) => task.storyId === storyId);
+    const todoList = document.getElementById("tasks-todo");
+    const doingList = document.getElementById("tasks-doing");
+    const doneList = document.getElementById("tasks-done");
 
-    if (todoList) {
-      todoList.innerHTML = "";
-    }
-    if (doingList) {
-      doingList.innerHTML = "";
-    }
-    if (doneList) {
-      doneList.innerHTML = "";
-    }
+    if (todoList) todoList.innerHTML = "";
+    if (doingList) doingList.innerHTML = "";
+    if (doneList) doneList.innerHTML = "";
 
     tasks.forEach((task) => {
       const taskElement = document.createElement("div");
-      taskElement.className = "task-card";
+      taskElement.className = "card mb-2";
       taskElement.innerHTML = `
-            <h4>${task.name}</h4>
-            <p>${task.description}</p>
-            <p>Priority: ${task.priority}</p>`;
+        <div class="card-body">
+          <h5 class="card-title">${task.name}</h5>
+          <p class="card-text">${task.description}</p>
+          <p class="card-text"><small class="text-muted">Priority: ${task.priority}</small></p>
+          <button type="button" class="btn btn-primary edit-btn">Edit</button>
+          <button type="button" class="btn btn-danger delete-btn">Delete</button>
+          <button type="button" class="btn btn-info details-btn">Details</button>
+        </div>`;
 
-      const editButton = document.createElement("button");
-      editButton.textContent = "Edit";
-      editButton.onclick = () => this.editTask(task.id);
+      taskElement
+        .querySelector(".edit-btn")
+        ?.addEventListener("click", () => this.editTask(task.id));
+      taskElement
+        .querySelector(".delete-btn")
+        ?.addEventListener("click", () => this.deleteTask(task.id));
+      taskElement
+        .querySelector(".details-btn")
+        ?.addEventListener("click", () => this.showTaskDetails(task.id));
 
-      const deleteButton = document.createElement("button");
-      deleteButton.textContent = "Delete";
-      deleteButton.onclick = () => this.deleteTask(task.id);
-
-      const detailsButton = document.createElement("button");
-      detailsButton.textContent = "See details";
-      detailsButton.onclick = () => this.showTaskDetails(task.id);
-
-      taskElement.appendChild(editButton);
-      taskElement.appendChild(deleteButton);
-      taskElement.appendChild(detailsButton);
-
-      // Append to the correct column based on task status
+      // Append to the correct column based on task state
       if (task.state === "Todo" && todoList) {
         todoList.appendChild(taskElement);
       } else if (task.state === "Doing" && doingList) {
@@ -67,11 +63,19 @@ export class TaskController {
     event.preventDefault();
     const idInput = document.getElementById("task-id") as HTMLInputElement;
     const nameInput = document.getElementById("task-name") as HTMLInputElement;
-    const descriptionInput = document.getElementById("task-description") as HTMLTextAreaElement;
-    const prioritySelect = document.getElementById("task-priority") as HTMLSelectElement;
-    const statusSelect = document.getElementById("task-status") as HTMLSelectElement;
-    const estimatedTimeInput = document.getElementById("task-estimated-time") as HTMLSelectElement;
-    const storyId = this.taskService.getActiveStoryId() || ""; // Assuming you have a story ID
+    const descriptionInput = document.getElementById(
+      "task-description"
+    ) as HTMLTextAreaElement;
+    const prioritySelect = document.getElementById(
+      "task-priority"
+    ) as HTMLSelectElement;
+    const statusSelect = document.getElementById(
+      "task-status"
+    ) as HTMLSelectElement;
+    const estimatedTimeInput = document.getElementById(
+      "task-estimated-time"
+    ) as HTMLSelectElement;
+    const storyId = this.taskService.getActiveStoryId() || "";
 
     const task: Task = {
       id: idInput.value || uuidv4(),
@@ -98,11 +102,21 @@ export class TaskController {
     const task = this.taskService.getItemById(id);
     if (task) {
       const idInput = document.getElementById("task-id") as HTMLInputElement;
-      const nameInput = document.getElementById("task-name") as HTMLInputElement;
-      const descriptionInput = document.getElementById("task-description") as HTMLTextAreaElement;
-      const prioritySelect = document.getElementById("task-priority") as HTMLSelectElement;
-      const statusSelect = document.getElementById("task-status") as HTMLSelectElement;
-      const estimatedTimeInput = document.getElementById("task-estimated-time") as HTMLSelectElement;
+      const nameInput = document.getElementById(
+        "task-name"
+      ) as HTMLInputElement;
+      const descriptionInput = document.getElementById(
+        "task-description"
+      ) as HTMLTextAreaElement;
+      const prioritySelect = document.getElementById(
+        "task-priority"
+      ) as HTMLSelectElement;
+      const statusSelect = document.getElementById(
+        "task-status"
+      ) as HTMLSelectElement;
+      const estimatedTimeInput = document.getElementById(
+        "task-estimated-time"
+      ) as HTMLSelectElement;
 
       idInput.value = task.id;
       nameInput.value = task.name;
@@ -125,55 +139,84 @@ export class TaskController {
     const task = this.taskService.getItemById(taskId);
     if (!task) return;
 
-    const detailsContainer = document.getElementById("task-details-container");
+    const modalElement = document.getElementById("taskDetailsModal");
+    const detailsContainer = modalElement?.querySelector(".modal-body");
     if (!detailsContainer) return;
 
     detailsContainer.innerHTML = `
-        <h2>Task Details: ${task.name}</h2>
-        <p>Description: ${task.description}</p>
-        <p>Priority: ${task.priority}</p>
-        <p>Status: ${task.state}</p>
-        <p>Estimated Time: ${task.estimatedTime} hours</p>
-        <p>Assigned to: ${task.userId || "None"}</p>
-        <p>Start date: ${task.startDate || "None"}</p>
-        <p>End date: ${task.endDate || "None"}</p>
+      <h2>Task Details: ${task.name}</h2>
+      <p>Description: ${task.description}</p>
+      <p>Priority: ${task.priority}</p>
+      <p>Status: ${task.state}</p>
+      <p>Estimated Time: ${task.estimatedTime} hours</p>
+      <p>Assigned to: ${task.userId || "None"}</p>
+      <p>Start date: ${
+        task.startDate ? new Date(task.startDate).toLocaleDateString() : "None"
+      }</p>
+      <p>End date: ${
+        task.endDate ? new Date(task.endDate).toLocaleDateString() : "None"
+      }</p>
     `;
 
-    //Create a dropdown to assign a user to the task
-    if (task.state == "Todo") {
+    if (task.state === "Todo") {
       const selectElement = document.createElement("select");
       selectElement.id = "user-select";
-      const optionElement = document.createElement("option");
-      optionElement.value = "";
-      optionElement.textContent = "Select a user";
-      selectElement.appendChild(optionElement);
-      detailsContainer.appendChild(selectElement);
+      selectElement.innerHTML = `<option value="">Select a user</option>`;
+      this.populateUserDropdown(selectElement);
 
       const assignUserButton = document.createElement("button");
+      assignUserButton.className = "btn btn-primary";
       assignUserButton.textContent = "Assign User";
       assignUserButton.onclick = () => this.assignUser(task.id);
 
+      detailsContainer.appendChild(selectElement);
       detailsContainer.appendChild(assignUserButton);
     }
-    const changeStateButton = document.createElement("button");
-    changeStateButton.textContent = "Mark as done";
-    changeStateButton.onclick = () => this.changeTaskState(task.id);
 
-    const closeButton = document.createElement("button");
-    closeButton.textContent = "Close";
-    closeButton.onclick = () => this.changeTaskDetailsVisibility();
+    if (task.state != "Done") {
+      const changeStateButton = document.createElement("button");
+      changeStateButton.className = "btn btn-success";
+      changeStateButton.textContent = "Mark as done";
+      changeStateButton.onclick = () => {
+        this.changeTaskState(task.id);
+      };
+      detailsContainer.appendChild(changeStateButton);
+    }
 
-    
-    detailsContainer.appendChild(changeStateButton);
-    detailsContainer.appendChild(closeButton);
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
 
-    this.populateUserDropdown();
-    this.changeTaskDetailsVisibility();
+  // Helper methods
+  public changeTaskDetailsVisibility() {
+    const modalElement = document.getElementById("taskDetailsModal");
+    if (!modalElement) return;
+
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    if (modal) {
+      modal.hide();
+    }
+  }
+
+  private populateUserDropdown(selectElement: HTMLSelectElement) {
+    const users = UserController.getUsers();
+    users.forEach((user) => {
+      if (user.role !== "Admin") {
+        const option = document.createElement("option");
+        option.value = user.id;
+        option.textContent = `${user.firstName} ${user.lastName} (${user.role})`;
+        selectElement.appendChild(option);
+      }
+    });
   }
 
   public assignUser(taskId: string) {
     const task = this.taskService.getItemById(taskId);
-    const userSelect = document.getElementById("user-select") as HTMLSelectElement;
+    const userSelect = document.getElementById(
+      "user-select"
+    ) as HTMLSelectElement;
 
     if (task && userSelect) {
       task.userId = userSelect.value;
@@ -197,33 +240,6 @@ export class TaskController {
     this.changeTaskDetailsVisibility();
   }
 
-  // Helper methods
-  private changeTaskDetailsVisibility() {
-    const detailsContainer = document.getElementById("task-details-container");
-    if (detailsContainer) {
-      if (detailsContainer.style.display == "block") {
-        detailsContainer.style.display = "none";
-      } else {
-        detailsContainer.style.display = "block";
-      }
-    }
-  }
-
-  public populateUserDropdown() {
-    const userSelect = document.getElementById("user-select");
-    if (!userSelect) return;
-
-    const users = UserController.getUsers();
-    users.forEach((user) => {
-      if (user.role != "Admin") {
-        const option = document.createElement("option");
-        option.value = user.id;
-        option.textContent = `${user.firstName} ${user.lastName} (${user.role})`;
-        userSelect.appendChild(option);
-      }
-    });
-  }
-
   private attachEventListeners() {
     const taskForm = document.getElementById("task-form");
     if (taskForm) {
@@ -234,10 +250,18 @@ export class TaskController {
   private resetForm() {
     const idInput = document.getElementById("task-id") as HTMLInputElement;
     const nameInput = document.getElementById("task-name") as HTMLInputElement;
-    const descriptionInput = document.getElementById("task-description") as HTMLTextAreaElement;
-    const prioritySelect = document.getElementById("task-priority") as HTMLSelectElement;
-    const statusSelect = document.getElementById("task-status") as HTMLSelectElement;
-    const estimatedTimeInput = document.getElementById("task-estimated-time") as HTMLSelectElement;
+    const descriptionInput = document.getElementById(
+      "task-description"
+    ) as HTMLTextAreaElement;
+    const prioritySelect = document.getElementById(
+      "task-priority"
+    ) as HTMLSelectElement;
+    const statusSelect = document.getElementById(
+      "task-status"
+    ) as HTMLSelectElement;
+    const estimatedTimeInput = document.getElementById(
+      "task-estimated-time"
+    ) as HTMLSelectElement;
 
     idInput.value = "";
     nameInput.value = "";

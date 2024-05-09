@@ -33,7 +33,6 @@ export class UserController {
     });
 
     if (!response.ok) {
-      alert('Failed to login');
       throw new Error('Failed to login');
     }
 
@@ -68,8 +67,13 @@ export class UserController {
 
   static toggleLoginFormVisibility(show: boolean) {
     const loginSection = document.getElementById("login-section");
-    if (loginSection == null) return;
-    loginSection.style.display = show ? "block" : "none";
+    if (loginSection === null) return;
+    
+    if (show) {
+      loginSection.classList.remove("d-none"); 
+    } else {
+      loginSection.classList.add("d-none"); 
+    }
   }
 
   static toggleProjectSection(show: boolean) {

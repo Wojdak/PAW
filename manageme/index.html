@@ -18,7 +18,7 @@
   </div>
 
   <h1 class="d-flex justify-content-center">ManageMe</h1>
-  <div id="user-info">
+  <div id="user-info" class="d-flex justify-content-center">
     <span id="username-display"></span>
   </div>
 
@@ -149,6 +149,24 @@
           <div class="card">
             <div class="card-header bg-success text-white">Done</div>
             <div class="card-body" id="tasks-done"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task Details Modal -->
+    <div class="modal fade" id="taskDetailsModal" tabindex="-1" aria-labelledby="taskDetailsModalLabel"
+      aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="taskDetailsModalLabel">Task Details</h5>
+          </div>
+          <div class="modal-body" id="task-details-container">
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           </div>
         </div>
       </div>

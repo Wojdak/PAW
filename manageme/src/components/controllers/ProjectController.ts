@@ -17,35 +17,32 @@ export class ProjectController {
     const projectsList = document.getElementById("projects-list");
 
     if (projectsList) {
-      projectsList.innerHTML = "";
+        projectsList.innerHTML = "";
 
-      projects.forEach((project) => {
-        const projectElement = document.createElement("div");
-        projectElement.innerHTML = `
-          <h3>${project.name}</h3>
-          <p>Description: ${project.description}</p>`;
+        projects.forEach((project) => {
+            const projectElement = document.createElement("div");
+            projectElement.className = "card mb-3";
+            projectElement.innerHTML = `
+                <div class="card-body">
+                    <h5 class="card-title">${project.name}</h5>
+                    <p class="card-text">${project.description}</p>
+                    <button class="btn btn-secondary select-btn">Select</button>
+                    <button class="btn btn-primary edit-btn">Edit</button>
+                    <button class="btn btn-danger delete-btn">Delete</button>
+                </div>`;
 
-        const editButton = document.createElement("button");
-        editButton.textContent = "Edit";
-        editButton.onclick = () => this.editProject(project.id);
+            const editBtn = projectElement.querySelector(".edit-btn") as HTMLButtonElement;
+            const deleteBtn = projectElement.querySelector(".delete-btn") as HTMLButtonElement;
+            const selectBtn = projectElement.querySelector(".select-btn") as HTMLButtonElement;
 
-        const deleteButton = document.createElement("button");
-        deleteButton.textContent = "Delete";
-        deleteButton.onclick = () => this.deleteProject(project.id);
+            if (editBtn) editBtn.onclick = () => this.editProject(project.id);
+            if (deleteBtn) deleteBtn.onclick = () => this.deleteProject(project.id);
+            if (selectBtn) selectBtn.onclick = () => this.setActiveProject(project.id);
 
-        const selectButton = document.createElement("button");
-        selectButton.textContent = "Select";
-        selectButton.onclick = () => this.setActiveProject(project.id);
-
-        projectElement.appendChild(selectButton);
-        projectElement.appendChild(editButton);
-        projectElement.appendChild(deleteButton);
-
-        projectsList.appendChild(projectElement);
-      });
+            projectsList.appendChild(projectElement);
+        });
     }
-  }
-
+}
   public saveProject(event: Event) {
     console.log("Saving project");
     event.preventDefault();
