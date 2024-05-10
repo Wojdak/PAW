@@ -3,12 +3,15 @@ import { Task } from "../models/TaskModel";
 import { UserController } from "./UserController";
 import { ApiService } from "../api/ApiService";
 import * as bootstrap from "bootstrap";
+import { NotificationService } from "../services/NotificationService";
 
 export class TaskController {
   private taskService: ApiService<Task>;
+  private notificationService: NotificationService;
 
   constructor() {
     this.taskService = new ApiService<Task>("tasks");
+    this.notificationService = new NotificationService();
     this.attachEventListeners();
   }
 
@@ -226,6 +229,9 @@ export class TaskController {
       this.renderTasks();
       this.changeTaskDetailsVisibility();
     }
+
+    this.notificationService.send({title: "Task assigned", message: "Task has been assigned to a user", date: new Date().toDateString(), priority: "medium", read: false})
+    this.updateNotificationCounter();
   }
 
   public changeTaskState(taskId: string) {
@@ -269,5 +275,14 @@ export class TaskController {
     prioritySelect.value = "Low";
     statusSelect.value = "Todo";
     estimatedTimeInput.value = "";
+  }
+
+  private updateNotificationCounter() {
+    const counterElement = document.getElementById("notification-container");
+    if (counterElement) {
+      this.notificationService.unreadCount().subscribe((count) => {
+        counterElement.textContent = count.toString();
+      });
+    }
   }
 }
