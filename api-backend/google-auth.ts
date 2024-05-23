@@ -12,6 +12,7 @@ interface User {
     username: string;
     email?: string;
 }
+
 const app = express()
 app.use(cors())
 app.use(express.json())
@@ -23,9 +24,14 @@ passport.use(new GoogleStrategy({
     callbackURL: "http://localhost:3000/auth/google/callback"
   },
   function(accessToken, refreshToken, profile, done) {
-    // Here, you could potentially look up or create a user in your database.
-    // For now, we just pass the profile as it is.
-    done(null, profile);
+    const email = profile.emails && profile.emails[0] ? profile.emails[0].value : undefined;
+
+    const user: User = {
+      id: profile.id,
+      username: profile.displayName,
+      email: email
+    };
+    done(null, user);
   }
 ));
 
@@ -40,9 +46,18 @@ passport.deserializeUser((user, done) => {
 app.get('/auth/google',
   passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-app.get('/auth/google/callback', 
-  passport.authenticate('google', { failureRedirect: '/login' }),
-  function(req, res) {
-    res.redirect('/');
-  });
+app.get(
+  "/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  function (req, res) {
+    const userData = encodeURIComponent(
+      JSON.stringify({
+        id: (req.user as User).id,
+        username: (req.user as User).username,
+        email: (req.user as User).email,
+      })
+    );
+    res.redirect(`http://localhost:5173/?data=${userData}`);
+  }
+);
 

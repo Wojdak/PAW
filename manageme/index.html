@@ -12,19 +12,54 @@
 </head>
 
 <body>
-  <div class="form-check form-switch mt-3 ms-3">
-    <input class="form-check-input" type="checkbox" id="darkModeToggle">
-    <label class="form-check-label" for="darkModeToggle">Light/Dark Mode</label>
+  <div class="header container-fluid mt-2">
+    <div class="row align-items-center">
+      <!-- Username on the left -->
+      <div class="col-md-4">
+        <div id="user-info">
+          <span id="username-display"></span>
+        </div>
+      </div>
+  
+      <!-- Notification counter in the center -->
+      <div class="col-md-4 d-flex justify-content-center">
+        <span role="button" id="notification-container">Notifications: 0</span>
+      </div>
+  
+      <!-- Dark mode toggle on the right -->
+      <div class="col-md-4 d-flex justify-content-end">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="darkModeToggle">
+          <label class="form-check-label" for="darkModeToggle">Light/Dark Mode</label>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div>
-    <span id="notification-container">0</span>
+
+  <div id="notification-list" class="mt-3"></div>
+
+  <!-- Notification Modal -->
+  <div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="notificationModalLabel">New Notification</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p id="notificationModalBody"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <h1 class="d-flex justify-content-center">ManageMe</h1>
-  <div id="user-info" class="d-flex justify-content-center">
-    <span id="username-display"></span>
-  </div>
+
 
   <div id="login-section" class="container mt-3 d-flex flex-column align-items-center">
     <form id="login-form" class="mb-3">

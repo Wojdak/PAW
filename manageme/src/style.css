@@ -177,3 +177,11 @@ input, select {
 #google-login-button:hover {
   background-color: #c33d2c;
 }
+
+.notification-item:hover {
+  cursor: pointer !important;
+}
+
+.notification-element:hover {
+  cursor: pointer !important;
+}

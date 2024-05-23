@@ -182,6 +182,9 @@ export class TaskController {
       changeStateButton.textContent = "Mark as done";
       changeStateButton.onclick = () => {
         this.changeTaskState(task.id);
+
+        this.notificationService.send({title: "Task finished", message: "Task has been finished and marked as closed", date: new Date().toDateString(), priority: "medium", read: false})
+        this.updateNotificationCounter();
       };
       detailsContainer.appendChild(changeStateButton);
     }
@@ -230,7 +233,7 @@ export class TaskController {
       this.changeTaskDetailsVisibility();
     }
 
-    this.notificationService.send({title: "Task assigned", message: "Task has been assigned to a user", date: new Date().toDateString(), priority: "medium", read: false})
+    this.notificationService.send({title: "Task assigned", message: "Task has been assigned to a user", date: new Date().toDateString(), priority: "low", read: false})
     this.updateNotificationCounter();
   }
 
@@ -277,12 +280,39 @@ export class TaskController {
     estimatedTimeInput.value = "";
   }
 
+  // Notification counter
   private updateNotificationCounter() {
     const counterElement = document.getElementById("notification-container");
     if (counterElement) {
       this.notificationService.unreadCount().subscribe((count) => {
-        counterElement.textContent = count.toString();
+        counterElement.textContent = `Notifications: ${count.toString()}`;
       });
     }
+
+    counterElement?.addEventListener("click", () => this.showNotifications());
+  }
+
+  public showNotifications() {
+    const notificationList = document.getElementById("notification-list");
+    if (!notificationList) return;
+  
+    this.notificationService.list().subscribe((notifications) => {
+      const unreadNotifications = notifications.filter(n => !n.read);
+      
+      notificationList.innerHTML = "";
+      
+      unreadNotifications.forEach((notification) => {
+        const notificationElement = document.createElement("div");
+        notificationElement.setAttribute("role", "button");
+
+        notificationElement.className = "alert alert-info notification-item";
+        notificationElement.textContent = `${notification.title}: ${notification.message} - Click to mark as read`;
+        notificationElement.onclick = () => {
+          this.notificationService.markAsRead(notification);
+        };
+  
+        notificationList.appendChild(notificationElement);
+      });
+    });
   }
 }

@@ -48,21 +48,24 @@ export class UserController {
     this.updateUsernameDisplay();
   }
 
-  static async loginUserGoogle(event: Event){
-    event.preventDefault();
-    const response = await fetch('http://localhost:3000/auth/google', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-    });
+  static async loginUserGoogle(){
+    window.location.href = 'http://localhost:3000/auth/google';
+  }
 
-    if (!response.ok) {
-      throw new Error('Failed to login');
+  static processGoogleLogin(userData: string) {
+    try {
+      const user = JSON.parse(decodeURIComponent(userData));
+      sessionStorage.setItem('userData', userData);
+      sessionStorage.setItem('username', user.username);
+      sessionStorage.setItem('email', user.email);
+      sessionStorage.setItem('token', user.aToken);
+      sessionStorage.setItem('refreshToken', user.rToken);
+      this.updateUsernameDisplay();
+      this.toggleLoginFormVisibility(false);
+      this.toggleProjectSection(true);
+    } catch (error) {
+      console.error('Error processing Google login:', error);
     }
-
-    const data = await response.json();
-    console.log('Login successful:', data);
   }
 
   static toggleLoginFormVisibility(show: boolean) {

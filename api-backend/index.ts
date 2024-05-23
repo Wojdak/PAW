@@ -71,6 +71,8 @@ interface User {
     id: string;
     username: string;
     email?: string;
+    aToken?: string;
+    rToken?: string;
 }
 
 declare module 'express-session' {
@@ -84,15 +86,17 @@ passport.use(new GoogleStrategy({
     clientSecret: process.env.CLIENT_SECRET as string,
     callbackURL: "http://localhost:3000/auth/google/callback"
   },
-  function(accessToken, refreshToken, profile, done) {
+function(accessToken, refreshToken, profile, done) {
     const user = {
-        id: profile.id,
-        username: profile.displayName,
-        email: profile.emails ? profile.emails[0].value : undefined
-      };
-  
+            id: profile.id,
+            username: profile.displayName,
+            email: profile.emails ? profile.emails[0].value : undefined,
+            aToken: accessToken,
+            rToken: refreshToken
+        };
+
     done(null, user);
-  }
+}
 ));
 
 passport.serializeUser((user, done) => {
@@ -106,21 +110,23 @@ passport.deserializeUser((user, done) => {
 app.get('/auth/google',
   passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-app.get('/auth/google/callback', 
-    passport.authenticate('google', { failureRedirect: '/login' }),
-    function(req, res) {
-        req.session.user = req.user as User; 
-        console.log(req.user);
-        res.json(req.session.user);
-});
-
-app.get('/userinfo', (req, res) => {
-    if (req.session && req.session.user) {
-        res.json(req.session.user);
-    } else {
-        res.status(401).send('No user is currently logged in.');
+app.get(
+    "/auth/google/callback",
+    passport.authenticate("google", { failureRedirect: "/login" }),
+    function (req, res) {
+      const userData = encodeURIComponent(
+        JSON.stringify({
+          id: (req.user as User).id,
+          username: (req.user as User).username,
+          email: (req.user as User).email,
+          aToken: (req.user as User).aToken,
+          rToken: (req.user as User).rToken,
+        })
+      );
+      res.redirect(`http://localhost:5173/?data=${userData}`);
     }
-});
+);
+  
 
 //Helper functions
 function validateUser(username: string, password: string): boolean {
