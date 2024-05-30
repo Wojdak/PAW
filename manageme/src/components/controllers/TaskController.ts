@@ -1,25 +1,25 @@
-import { v4 as uuidv4 } from "uuid";
 import { Task } from "../models/TaskModel";
 import { UserController } from "./UserController";
-import { ApiService } from "../api/ApiService";
 import * as bootstrap from "bootstrap";
 import { NotificationService } from "../services/NotificationService";
 
 export class TaskController {
-  private taskService: ApiService<Task>;
   private notificationService: NotificationService;
 
   constructor() {
-    this.taskService = new ApiService<Task>("tasks");
     this.notificationService = new NotificationService();
     this.attachEventListeners();
   }
 
-  public renderTasks() {
-    const storyId = this.taskService.getActiveStoryId();
-    const tasks = this.taskService
-      .getAllItems()
-      .filter((task) => task.storyId === storyId);
+  public async renderTasks() {
+    const storyId = sessionStorage.getItem('activeStoryId');
+    if (!storyId) return;
+
+    const response = await fetch(`http://localhost:3000/tasks?storyId=${storyId}`);
+    const tasks: Task[] = await response.json();
+
+    console.log(tasks);
+
     const todoList = document.getElementById("tasks-todo");
     const doingList = document.getElementById("tasks-doing");
     const doneList = document.getElementById("tasks-done");
@@ -29,59 +29,48 @@ export class TaskController {
     if (doneList) doneList.innerHTML = "";
 
     tasks.forEach((task) => {
-      const taskElement = document.createElement("div");
-      taskElement.className = "card mb-2";
-      taskElement.innerHTML = `
-        <div class="card-body">
-          <h5 class="card-title">${task.name}</h5>
-          <p class="card-text">${task.description}</p>
-          <p class="card-text"><small class="text-muted">Priority: ${task.priority}</small></p>
-          <button type="button" class="btn btn-primary edit-btn">Edit</button>
-          <button type="button" class="btn btn-danger delete-btn">Delete</button>
-          <button type="button" class="btn btn-info details-btn">Details</button>
-        </div>`;
+        const taskElement = document.createElement("div");
+        taskElement.className = "card mb-2";
+        taskElement.innerHTML = `
+            <div class="card-body">
+                <h5 class="card-title">${task.name}</h5>
+                <p class="card-text">${task.description}</p>
+                <p class="card-text"><small class="text-muted">Priority: ${task.priority}</small></p>
+                <button type="button" class="btn btn-primary edit-btn">Edit</button>
+                <button type="button" class="btn btn-danger delete-btn">Delete</button>
+                <button type="button" class="btn btn-info details-btn">Details</button>
+            </div>`;
 
-      taskElement
-        .querySelector(".edit-btn")
-        ?.addEventListener("click", () => this.editTask(task.id));
-      taskElement
-        .querySelector(".delete-btn")
-        ?.addEventListener("click", () => this.deleteTask(task.id));
-      taskElement
-        .querySelector(".details-btn")
-        ?.addEventListener("click", () => this.showTaskDetails(task.id));
+        taskElement.querySelector(".edit-btn")?.addEventListener("click", () => this.editTask(task._id!.toString()));
+        taskElement.querySelector(".delete-btn")?.addEventListener("click", () => this.deleteTask(task._id!.toString()));
+        taskElement.querySelector(".details-btn")?.addEventListener("click", () => this.showTaskDetails(task._id!.toString()));
 
-      // Append to the correct column based on task state
-      if (task.state === "Todo" && todoList) {
-        todoList.appendChild(taskElement);
-      } else if (task.state === "Doing" && doingList) {
-        doingList.appendChild(taskElement);
-      } else if (task.state === "Done" && doneList) {
-        doneList.appendChild(taskElement);
-      }
+        if (task.state === "Todo" && todoList) {
+            todoList.appendChild(taskElement);
+        } else if (task.state === "Doing" && doingList) {
+            doingList.appendChild(taskElement);
+        } else if (task.state === "Done" && doneList) {
+            doneList.appendChild(taskElement);
+        }
     });
+}
+
+public async saveTask(event: Event) {
+  event.preventDefault();
+  const idInput = document.getElementById("task-id") as HTMLInputElement;
+  const nameInput = document.getElementById("task-name") as HTMLInputElement;
+  const descriptionInput = document.getElementById("task-description") as HTMLTextAreaElement;
+  const prioritySelect = document.getElementById("task-priority") as HTMLSelectElement;
+  const statusSelect = document.getElementById("task-status") as HTMLSelectElement;
+  const estimatedTimeInput = document.getElementById("task-estimated-time") as HTMLSelectElement;
+  const storyId = sessionStorage.getItem('activeStoryId');
+
+  if (!storyId) {
+      alert('No active story selected');
+      return;
   }
 
-  public saveTask(event: Event) {
-    event.preventDefault();
-    const idInput = document.getElementById("task-id") as HTMLInputElement;
-    const nameInput = document.getElementById("task-name") as HTMLInputElement;
-    const descriptionInput = document.getElementById(
-      "task-description"
-    ) as HTMLTextAreaElement;
-    const prioritySelect = document.getElementById(
-      "task-priority"
-    ) as HTMLSelectElement;
-    const statusSelect = document.getElementById(
-      "task-status"
-    ) as HTMLSelectElement;
-    const estimatedTimeInput = document.getElementById(
-      "task-estimated-time"
-    ) as HTMLSelectElement;
-    const storyId = this.taskService.getActiveStoryId() || "";
-
-    const task: Task = {
-      id: idInput.value || uuidv4(),
+  const task: Task = {
       name: nameInput.value,
       description: descriptionInput.value,
       priority: prioritySelect.value as "Low" | "Medium" | "High",
@@ -89,79 +78,76 @@ export class TaskController {
       estimatedTime: estimatedTimeInput.value,
       state: statusSelect.value as "Todo" | "Doing" | "Done",
       creationDate: new Date(),
-    };
+  };
 
-    if (idInput.value) {
-      this.taskService.updateItem(task);
-    } else {
-      this.taskService.addItem(task);
-    }
-
-    this.resetForm();
-    this.renderTasks();
+  if (idInput.value) {
+      await fetch(`http://localhost:3000/tasks/${idInput.value}`, {
+          method: 'PUT',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(task),
+      });
+  } else {
+      await fetch('http://localhost:3000/tasks', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(task),
+      });
   }
 
-  public editTask(id: string) {
-    const task = this.taskService.getItemById(id);
-    if (task) {
-      const idInput = document.getElementById("task-id") as HTMLInputElement;
-      const nameInput = document.getElementById(
-        "task-name"
-      ) as HTMLInputElement;
-      const descriptionInput = document.getElementById(
-        "task-description"
-      ) as HTMLTextAreaElement;
-      const prioritySelect = document.getElementById(
-        "task-priority"
-      ) as HTMLSelectElement;
-      const statusSelect = document.getElementById(
-        "task-status"
-      ) as HTMLSelectElement;
-      const estimatedTimeInput = document.getElementById(
-        "task-estimated-time"
-      ) as HTMLSelectElement;
+  this.resetForm();
+  await this.renderTasks();
+}
 
-      idInput.value = task.id;
-      nameInput.value = task.name;
-      descriptionInput.value = task.description;
-      prioritySelect.value = task.priority;
-      statusSelect.value = task.state;
-      estimatedTimeInput.value = task.estimatedTime;
-    }
-  }
+public async editTask(id: string) {
+  const response = await fetch(`http://localhost:3000/tasks/${id}`);
+  const task: Task = await response.json();
 
-  public deleteTask(id: string) {
-    const task = this.taskService.getItemById(id);
-    if (task) {
-      this.taskService.deleteItem(id);
-      this.renderTasks();
-    }
-  }
+  const idInput = document.getElementById("task-id") as HTMLInputElement;
+  const nameInput = document.getElementById("task-name") as HTMLInputElement;
+  const descriptionInput = document.getElementById("task-description") as HTMLTextAreaElement;
+  const prioritySelect = document.getElementById("task-priority") as HTMLSelectElement;
+  const statusSelect = document.getElementById("task-status") as HTMLSelectElement;
+  const estimatedTimeInput = document.getElementById("task-estimated-time") as HTMLSelectElement;
 
-  public showTaskDetails(taskId: string) {
-    const task = this.taskService.getItemById(taskId);
-    if (!task) return;
+  idInput.value = task._id!.toString();
+  nameInput.value = task.name;
+  descriptionInput.value = task.description;
+  prioritySelect.value = task.priority;
+  statusSelect.value = task.state;
+  estimatedTimeInput.value = task.estimatedTime;
+}
 
-    const modalElement = document.getElementById("taskDetailsModal");
-    const detailsContainer = modalElement?.querySelector(".modal-body");
-    if (!detailsContainer) return;
+public async deleteTask(id: string) {
+  await fetch(`http://localhost:3000/tasks/${id}`, {
+      method: 'DELETE',
+  });
+  await this.renderTasks();
+}
 
-    detailsContainer.innerHTML = `
+public async showTaskDetails(taskId: string) {
+  const response = await fetch(`http://localhost:3000/tasks/${taskId}`);
+  const task: Task = await response.json();
+
+  const modalElement = document.getElementById("taskDetailsModal");
+  const detailsContainer = modalElement?.querySelector(".modal-body");
+  if (!detailsContainer) return;
+
+  detailsContainer.innerHTML = `
       <h2>Task Details: ${task.name}</h2>
       <p>Description: ${task.description}</p>
       <p>Priority: ${task.priority}</p>
       <p>Status: ${task.state}</p>
       <p>Estimated Time: ${task.estimatedTime} hours</p>
       <p>Assigned to: ${task.userId || "None"}</p>
-      <p>Start date: ${
-        task.startDate ? new Date(task.startDate).toLocaleDateString() : "None"
-      }</p>
-      <p>End date: ${
-        task.endDate ? new Date(task.endDate).toLocaleDateString() : "None"
-      }</p>
-    `;
+      <p>Start date: ${task.startDate ? new Date(task.startDate).toLocaleDateString() : "None"}</p>
+      <p>End date: ${task.endDate ? new Date(task.endDate).toLocaleDateString() : "None"}</p>
+  `;
 
-    if (task.state === "Todo") {
+  if (task.state === "Todo") {
       const selectElement = document.createElement("select");
       selectElement.id = "user-select";
       selectElement.innerHTML = `<option value="">Select a user</option>`;
@@ -170,30 +156,37 @@ export class TaskController {
       const assignUserButton = document.createElement("button");
       assignUserButton.className = "btn btn-primary";
       assignUserButton.textContent = "Assign User";
-      assignUserButton.onclick = () => this.assignUser(task.id);
+      assignUserButton.onclick = () => this.assignUser(task._id!.toString());
 
       detailsContainer.appendChild(selectElement);
       detailsContainer.appendChild(assignUserButton);
-    }
+  }
 
-    if (task.state != "Done") {
+  if (task.state != "Done") {
       const changeStateButton = document.createElement("button");
       changeStateButton.className = "btn btn-success";
       changeStateButton.textContent = "Mark as done";
       changeStateButton.onclick = () => {
-        this.changeTaskState(task.id);
+          this.changeTaskState(task._id!.toString());
 
-        this.notificationService.send({title: "Task finished", message: "Task has been finished and marked as closed", date: new Date().toDateString(), priority: "medium", read: false})
-        this.updateNotificationCounter();
+          this.notificationService.send({
+              title: "Task finished",
+              message: "Task has been finished and marked as closed",
+              date: new Date().toDateString(),
+              priority: "medium",
+              read: false
+          });
+          this.updateNotificationCounter();
       };
       detailsContainer.appendChild(changeStateButton);
-    }
+  }
 
-    if (modalElement) {
+  if (modalElement) {
       const modal = new bootstrap.Modal(modalElement);
       modal.show();
-    }
   }
+}
+
 
   // Helper methods
   public changeTaskDetailsVisibility() {
@@ -206,47 +199,62 @@ export class TaskController {
     }
   }
 
-  private populateUserDropdown(selectElement: HTMLSelectElement) {
-    const users = UserController.getUsers();
-    users.forEach((user) => {
-      if (user.role !== "Admin") {
-        const option = document.createElement("option");
-        option.value = user.id;
-        option.textContent = `${user.firstName} ${user.lastName} (${user.role})`;
-        selectElement.appendChild(option);
-      }
-    });
-  }
 
-  public assignUser(taskId: string) {
-    const task = this.taskService.getItemById(taskId);
-    const userSelect = document.getElementById(
-      "user-select"
-    ) as HTMLSelectElement;
+
+  private async populateUserDropdown(selectElement: HTMLSelectElement) {
+    const users = await UserController.getUsers();
+    users.forEach((user) => {
+        if (user.role !== "Admin") {
+            const option = document.createElement("option");
+            option.value = user._id!.toString();
+            option.textContent = `${user.firstName} ${user.lastName} (${user.role})`;
+            selectElement.appendChild(option);
+        }
+    });
+}
+
+  public async assignUser(taskId: string) {
+    const response = await fetch(`http://localhost:3000/tasks/${taskId}`);
+    const task: Task = await response.json();
+    const userSelect = document.getElementById("user-select") as HTMLSelectElement;
 
     if (task && userSelect) {
-      task.userId = userSelect.value;
-      task.state = "Doing";
-      task.startDate = new Date();
-      this.taskService.updateItem(task);
-      this.renderTasks();
-      this.changeTaskDetailsVisibility();
-    }
+            task.userId = userSelect.value;
+            task.state = "Doing";
+            task.startDate = new Date();
+
+            await fetch(`http://localhost:3000/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(task),
+            });
+            await this.renderTasks();
+            this.changeTaskDetailsVisibility();
+        }
 
     this.notificationService.send({title: "Task assigned", message: "Task has been assigned to a user", date: new Date().toDateString(), priority: "low", read: false})
     this.updateNotificationCounter();
   }
 
-  public changeTaskState(taskId: string) {
-    const task = this.taskService.getItemById(taskId);
+  public async changeTaskState(taskId: string) {
+    const response = await fetch(`http://localhost:3000/tasks/${taskId}`);
+    const task: Task = await response.json();
     if (!task) return;
 
     task.state = "Done";
     task.endDate = new Date();
 
-    this.taskService.updateItem(task);
-    this.renderTasks();
-    this.changeTaskDetailsVisibility();
+     await fetch(`http://localhost:3000/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(task),
+        });
+      await this.renderTasks();
+      this.changeTaskDetailsVisibility();
   }
 
   private attachEventListeners() {

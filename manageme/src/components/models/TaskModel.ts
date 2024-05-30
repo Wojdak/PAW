@@ -1,5 +1,7 @@
+import { ObjectId} from 'mongodb';
+
 export interface Task {
-    id: string;
+    _id?: ObjectId;
     name: string;
     description: string;
     priority: 'Low' | 'Medium' | 'High';
@@ -9,5 +11,5 @@ export interface Task {
     creationDate: Date;
     startDate?: Date;
     endDate?: Date;
-    userId?: string; 
+    userId?: string;
 }

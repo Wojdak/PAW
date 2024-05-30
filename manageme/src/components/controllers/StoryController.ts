@@ -1,26 +1,23 @@
 // src/controllers/StoryController.ts
-import { v4 as uuidv4 } from "uuid";
 import { Story } from "../models/StoryModel";
-import { ApiService } from "../api/ApiService";
 import { UserController } from "./UserController";
 import { TaskController } from "./TaskController";
 
-
 export class StoryController {
-  private storyService: ApiService<Story>;
   private taskController = new TaskController();
 
   constructor() {
-    this.storyService = new ApiService<Story>("stories");
     this.attachEventListeners();
     this.setupFilterChangeListener();
+    this.renderStories();
   }
 
-  public renderStories() {
-    const projectId = this.storyService.getActiveProjectId();
+  public async renderStories() {
+    const projectId = sessionStorage.getItem('activeProjectId');
     if (!projectId) return;
 
-    let stories = this.storyService.getAllItems().filter((story) => story.projectId === projectId);
+    const response = await fetch(`http://localhost:3000/stories?projectId=${projectId}`);
+    let stories: Story[] = await response.json();
 
     // Filter stories by status
     const filter = (document.getElementById("story-filter") as HTMLSelectElement)?.value;
@@ -42,6 +39,7 @@ export class StoryController {
                     <p class="card-text"><small class="text-muted">Priority: ${story.priority}</small></p>
                     <p class="card-text"><small class="text-muted">Status: ${story.state}</small></p>
                     <p class="card-text"><small class="text-muted">Created: ${new Date(story.creationDate).toLocaleDateString()}</small></p>
+                    <p class="card-text"><small class="text-muted">Owner id: ${story.ownerId}</small></p>
                     <button class="btn btn-secondary select-btn">Select</button>
                     <button class="btn btn-primary edit-btn">Edit</button>
                     <button class="btn btn-danger delete-btn">Delete</button>
@@ -54,64 +52,83 @@ export class StoryController {
             const deleteBtn = storyElement.querySelector(".delete-btn") as HTMLButtonElement;
             const selectBtn = storyElement.querySelector(".select-btn") as HTMLButtonElement;
 
-            if (editBtn) editBtn.onclick = () => this.editStory(story.id);
-            if (deleteBtn) deleteBtn.onclick = () => this.deleteStory(story.id);
-            if (selectBtn) selectBtn.onclick = () => this.setActiveStory(story.id);
+            if (editBtn) editBtn.onclick = () => this.editStory(story._id!.toString());
+            if (deleteBtn) deleteBtn.onclick = () => this.deleteStory(story._id!.toString());
+            if (selectBtn) selectBtn.onclick = () => this.setActiveStory(story._id!.toString());
         });
     }
 }
 
-  public saveStory(event: Event) {
-    event.preventDefault();
-    const idInput = document.getElementById("story-id") as HTMLInputElement;
-    const nameInput = document.getElementById("story-name") as HTMLInputElement;
-    const descriptionInput = document.getElementById("story-description") as HTMLTextAreaElement;
-    const prioritySelect = document.getElementById("story-priority") as HTMLSelectElement;
-    const statusSelect = document.getElementById("story-status") as HTMLSelectElement;
-    const projectId = this.storyService.getActiveProjectId() || "";
+public async saveStory(event: Event) {
+  event.preventDefault();
+  const idInput = document.getElementById("story-id") as HTMLInputElement;
+  const nameInput = document.getElementById("story-name") as HTMLInputElement;
+  const descriptionInput = document.getElementById("story-description") as HTMLTextAreaElement;
+  const prioritySelect = document.getElementById("story-priority") as HTMLSelectElement;
+  const statusSelect = document.getElementById("story-status") as HTMLSelectElement;
+  const projectId = sessionStorage.getItem('activeProjectId');
 
-    const story: Story = {
-      id: idInput.value || uuidv4(),
+  if (!projectId) {
+      alert('No active project selected');
+      return;
+  }
+  console.log(this.getCurrentUser()._id!);
+
+  const story: Story = {
       name: nameInput.value,
       description: descriptionInput.value,
       priority: prioritySelect.value as "Low" | "Medium" | "High",
       projectId: projectId,
       creationDate: new Date(),
       state: statusSelect.value as "Todo" | "Doing" | "Done",
-      ownerId: this.getCurrentUser().id,
-    };
+      ownerId: this.getCurrentUser()._id!
+  };
 
-    if (idInput.value) {
-      this.storyService.updateItem(story);
-    } else {
-      this.storyService.addItem(story);
-    }
-
-    this.resetForm();
-    this.renderStories();
+  if (idInput.value) {
+      await fetch(`http://localhost:3000/stories/${idInput.value}`, {
+          method: 'PUT',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(story),
+      });
+  } else {
+      await fetch('http://localhost:3000/stories', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(story),
+      });
   }
 
-  public editStory(id: string) {
-    const story = this.storyService.getItemById(id);
-    if (story) {
-      const idInput = document.getElementById("story-id") as HTMLInputElement;
-      const nameInput = document.getElementById("story-name") as HTMLInputElement;
-      const descriptionInput = document.getElementById("story-description") as HTMLTextAreaElement;
-      const prioritySelect = document.getElementById("story-priority") as HTMLSelectElement;
-      const statusSelect = document.getElementById("story-status") as HTMLSelectElement;
+  this.resetForm();
+  await this.renderStories();
+}
 
-      idInput.value = story.id;
-      nameInput.value = story.name;
-      descriptionInput.value = story.description;
-      prioritySelect.value = story.priority;
-      statusSelect.value = story.state;
-    }
-  }
+public async editStory(id: string) {
+  const response = await fetch(`http://localhost:3000/stories/${id}`);
+  const story: Story = await response.json();
 
-  public deleteStory(id: string) {
-    this.storyService.deleteItem(id);
-    this.renderStories();
-  }
+  const idInput = document.getElementById("story-id") as HTMLInputElement;
+  const nameInput = document.getElementById("story-name") as HTMLInputElement;
+  const descriptionInput = document.getElementById("story-description") as HTMLTextAreaElement;
+  const prioritySelect = document.getElementById("story-priority") as HTMLSelectElement;
+  const statusSelect = document.getElementById("story-status") as HTMLSelectElement;
+
+  idInput.value = story._id!.toString();
+  nameInput.value = story.name;
+  descriptionInput.value = story.description;
+  prioritySelect.value = story.priority;
+  statusSelect.value = story.state;
+}
+
+public async deleteStory(id: string) {
+  await fetch(`http://localhost:3000/stories/${id}`, {
+    method: 'DELETE',
+  });
+  await this.renderStories();
+}
 
   // Helper methods
   private resetForm() {
@@ -143,16 +160,21 @@ export class StoryController {
   }
 
   private getCurrentUser() {
-    return UserController.getLoggedInUser();
+    const user = UserController.getLoggedInUser();
+
+    if(!user) {
+      throw new Error('No user logged in');
+    }
+
+    return user;
   }
 
   // Display Tasks
-  public setActiveStory(storyId: string): void {
-    this.storyService.setActiveStoryId(storyId);
+  public async setActiveStory(storyId: string) {
+    sessionStorage.setItem('activeStoryId', storyId);
     this.toggleStoryVisibility(false);
-    this.taskController.renderTasks();
-    this.toggleTaskSection(true); 
-    
+    await this.taskController.renderTasks();
+    this.toggleTaskSection(true);
   }
 
   public toggleStoryVisibility(show: boolean) {

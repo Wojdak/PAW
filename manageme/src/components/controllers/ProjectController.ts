@@ -1,50 +1,69 @@
-import { v4 as uuidv4 } from "uuid";
 import { Project } from "../models/ProjectModel";
-import { ApiService } from "../api/ApiService";
 import { StoryController } from "./StoryController";
 
 export class ProjectController {
-  private storageService: ApiService<Project>;
   private storyController = new StoryController();
 
   constructor() {
-    this.storageService = new ApiService<Project>("projects");
-    this.attachEventListeners();
+      this.attachEventListeners();
   }
 
-  public renderProjects() {
-    const projects = this.storageService.getAllItems();
-    const projectsList = document.getElementById("projects-list");
+  public async renderProjects() {
+      const response = await fetch('http://localhost:3000/projects');
+      const projects: Project[] = await response.json();
+      const projectsList = document.getElementById("projects-list");
 
-    if (projectsList) {
-        projectsList.innerHTML = "";
+      if (projectsList) {
+          projectsList.innerHTML = "";
 
-        projects.forEach((project) => {
-            const projectElement = document.createElement("div");
-            projectElement.className = "card mb-3";
-            projectElement.innerHTML = `
-                <div class="card-body">
-                    <h5 class="card-title">${project.name}</h5>
-                    <p class="card-text">${project.description}</p>
-                    <button class="btn btn-secondary select-btn">Select</button>
-                    <button class="btn btn-primary edit-btn">Edit</button>
-                    <button class="btn btn-danger delete-btn">Delete</button>
-                </div>`;
+          projects.forEach((project) => {
+              const projectElement = document.createElement("div");
+              projectElement.className = "card mb-3";
+              projectElement.innerHTML = `
+                  <div class="card-body">
+                      <h5 class="card-title">${project.name}</h5>
+                      <p class="card-text">${project.description}</p>
+                      <button class="btn btn-secondary select-btn">Select</button>
+                      <button class="btn btn-primary edit-btn">Edit</button>
+                      <button class="btn btn-danger delete-btn">Delete</button>
+                  </div>`;
 
-            const editBtn = projectElement.querySelector(".edit-btn") as HTMLButtonElement;
-            const deleteBtn = projectElement.querySelector(".delete-btn") as HTMLButtonElement;
-            const selectBtn = projectElement.querySelector(".select-btn") as HTMLButtonElement;
+              const editBtn = projectElement.querySelector(".edit-btn") as HTMLButtonElement;
+              const deleteBtn = projectElement.querySelector(".delete-btn") as HTMLButtonElement;
+              const selectBtn = projectElement.querySelector(".select-btn") as HTMLButtonElement;
 
-            if (editBtn) editBtn.onclick = () => this.editProject(project.id);
-            if (deleteBtn) deleteBtn.onclick = () => this.deleteProject(project.id);
-            if (selectBtn) selectBtn.onclick = () => this.setActiveProject(project.id);
+              if (editBtn) editBtn.onclick = () => this.editProject(project._id!.toString());
+              if (deleteBtn) deleteBtn.onclick = () => this.deleteProject(project._id!.toString());
+              if (selectBtn) selectBtn.onclick = () => this.setActiveProject(project._id!.toString());
 
-            projectsList.appendChild(projectElement);
+              projectsList.appendChild(projectElement);
+          });
+      }
+  }
+
+  private async editProject(id: string) {
+    const response = await fetch(`http://localhost:3000/projects/${id}`);
+    const project: Project = await response.json();
+
+    const idInput = document.getElementById("project-id") as HTMLInputElement;
+    const nameInput = document.getElementById("project-name") as HTMLInputElement;
+    const descriptionInput = document.getElementById("project-description") as HTMLTextAreaElement;
+
+    idInput.value = project._id!.toString();
+    nameInput.value = project.name;
+    descriptionInput.value = project.description;
+}
+
+  private async deleteProject(id: string) {
+    if (confirm('Are you sure you want to delete this project?')) {
+        await fetch(`http://localhost:3000/projects/${id}`, {
+            method: 'DELETE',
         });
+        await this.renderProjects();
     }
 }
-  public saveProject(event: Event) {
-    console.log("Saving project");
+
+  public async saveProject(event: Event) {
     event.preventDefault();
 
     const idInput = document.getElementById("project-id") as HTMLInputElement;
@@ -52,38 +71,31 @@ export class ProjectController {
     const descriptionInput = document.getElementById("project-description") as HTMLTextAreaElement;
 
     const project: Project = {
-      id: idInput.value || uuidv4(),
-      name: nameInput.value,
-      description: descriptionInput.value,
+        name: nameInput.value,
+        description: descriptionInput.value,
     };
 
     if (idInput.value) {
-      this.storageService.updateItem(project);
+        await fetch(`http://localhost:3000/projects/${idInput.value}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(project),
+        });
     } else {
-      this.storageService.addItem(project);
+        await fetch('http://localhost:3000/projects', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(project),
+        });
     }
 
     this.resetForm();
-    this.renderProjects();
-  }
-
-  public editProject(id: string) {
-    const project = this.storageService.getItemById(id);
-    if (project) {
-      const idInput = document.getElementById("project-id") as HTMLInputElement;
-      const nameInput = document.getElementById("project-name") as HTMLInputElement;
-      const descriptionInput = document.getElementById("project-description") as HTMLTextAreaElement;
-
-      idInput.value = project.id;
-      nameInput.value = project.name;
-      descriptionInput.value = project.description;
-    }
-  }
-
-  public deleteProject(id: string) {
-    this.storageService.deleteItem(id);
-    this.renderProjects();
-  }
+    await this.renderProjects();
+}
 
   // Helper methods
   private resetForm() {
@@ -107,13 +119,12 @@ export class ProjectController {
     }
   }
 
-  // Seting active project and changing the UI
-  public setActiveProject(id: string): void {
-    this.storageService.setActiveProjectId(id);
+  public async setActiveProject(id: string) {
+    sessionStorage.setItem('activeProjectId', id);
     this.toggleProjectVisibility(false);
-    this.storyController.renderStories();
+    await this.storyController.renderStories();
     this.toggleStorySection(true);
-  }
+}
 
   public toggleProjectVisibility(show: boolean) {
     const projectSection = document.getElementById("project-section");

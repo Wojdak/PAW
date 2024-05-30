@@ -29,7 +29,6 @@ export class NotificationService {
     }
 
     handleNotificationDisplay(notification: Notification) {
-        // Check if the notification priority is medium or high
         if (notification.priority === 'medium' || notification.priority === 'high') {
             this.showNotificationModal(notification);
         }
