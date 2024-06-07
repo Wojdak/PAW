@@ -3,10 +3,11 @@ import jwt from 'jsonwebtoken'
 import { JwtPayload } from 'jsonwebtoken';
 import 'dotenv/config'
 import cors from 'cors'
-import passport from 'passport';
+import passport, { use } from 'passport';
 import session from 'express-session';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient } = require('mongodb');
+import { ObjectId } from 'mongodb';
 import { Db, MongoError } from 'mongodb';
 import bcrypt from 'bcrypt';
 
@@ -15,7 +16,13 @@ const port = 3000
 
 const tokenSecret = process.env.TOKEN_SECRET as string
 
-app.use(cors())
+
+const corsOptions = {
+  origin: 'http://localhost:5173',
+  credentials: true, 
+};
+
+app.use(cors(corsOptions));
 app.use(express.json())
 
 app.use(session({
@@ -72,6 +79,23 @@ app.post('/register', async (req: Request, res: Response) => {
   }
 });
 
+app.get("/logout", (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).send("Failed to log out properly");
+    }
+
+    res.clearCookie("connect.sid", { path: "/" });
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).send("Failed to destroy session");
+      }
+
+      res.status(200).send("Logged out successfully");
+    });
+  });
+});
+
 app.post('/validate-token', (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -125,39 +149,55 @@ app.get('/users', async (req: Request, res: Response) => {
 });
 
 //GOOGLE AUTHENTICATION
-interface User {
-    _id: string;
-    username: string;
-    email?: string;
-    aToken?: string;
-    rToken?: string;
-}
-
 passport.use(new GoogleStrategy({
-    clientID: process.env.CLIENT_ID as string,
-    clientSecret: process.env.CLIENT_SECRET as string,
-    callbackURL: "http://localhost:3000/auth/google/callback"
-  },
-function(accessToken, refreshToken, profile, done) {
-    const user = {
-            _id: profile.id,
-            username: profile.displayName,
-            email: profile.emails ? profile.emails[0].value : undefined,
-            aToken: accessToken,
-            rToken: refreshToken
-        };
+  clientID: process.env.CLIENT_ID as string,
+  clientSecret: process.env.CLIENT_SECRET as string,
+  callbackURL: "http://localhost:3000/auth/google/callback"
+},
+async (accessToken: string, refreshToken: string, profile: any, done: Function) => {
+  try {
+    const collection = db.collection('Users');
+
+    let user = await collection.findOne({ googleId: profile.id });
+
+    if (!user) {
+      const newUser = {
+        googleId: profile.id,
+        username: profile.displayName,
+        email: profile.emails[0].value,
+        firstName: profile.name.givenName,
+        lastName: profile.name.familyName,
+        role: 'Developer',
+      };
+
+      const result = await collection.insertOne(newUser);
+      user = { ...newUser, _id: result.insertedId }; // Add the generated ID to the user object
+      console.log(user);
+    }
 
     done(null, user);
+  } catch (err) {
+    done(err);
+  }
 }
 ));
 
-passport.serializeUser((user, done) => {
-  done(null, user as User);
+// Serialize user - only serialize the user ID
+passport.serializeUser((user: any, done) => {
+  done(null, user._id);
 });
 
-passport.deserializeUser((user, done) => {
-  done(null, user as User);
+// Deserialize user - fetch the user from the database using the ID
+passport.deserializeUser(async (id: string, done) => {
+  try {
+    const collection = db.collection('Users');
+    const user = await collection.findOne({ _id: new ObjectId(id) });
+    done(null, user);
+  } catch (err) {
+    done(err, null);
+  }
 });
+
 
 app.get('/auth/google',
   passport.authenticate('google', { scope: ['profile', 'email'] }));
@@ -166,19 +206,25 @@ app.get(
     "/auth/google/callback",
     passport.authenticate("google", { failureRedirect: "/login" }),
     function (req, res) {
-      const userData = encodeURIComponent(
-        JSON.stringify({
-          _id: (req.user as User)._id,
-          username: (req.user as User).username,
-          email: (req.user as User).email,
-          aToken: (req.user as User).aToken,
-          rToken: (req.user as User).rToken,
-        })
-      );
+      const user = req.user as any;
+      if (user) {
+        const token = generateToken(300, { username: user.username, userId: user._id });
+  
+        const userData = encodeURIComponent(
+          JSON.stringify({
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            token: token
+          })
+        );
       res.redirect(`http://localhost:5173/?data=${userData}`);
     }
+  }
 );
-  
 
 //Helper functions
 function generateToken(expirationInSeconds: number, claims: object) {
@@ -289,19 +335,24 @@ app.delete('/stories/:id', async (req: Request, res: Response) => {
 
 // TASK ENDPOINTS
 app.get('/tasks', async (req: Request, res: Response) => {
-  const { _storyId } = req.query;
-  let query = {};
+  const { storyId, userId } = req.query;
+  let query: any = {};
 
-  if (_storyId) {
-      query = { storyId: new ObjectId(_storyId as string) };
+  if (storyId) {
+    query.storyId = new ObjectId(storyId as string);
   }
 
+  if (userId) {
+    query.userId = new ObjectId(userId as string);
+  }
+
+  console.log(query)
   try {
-      const tasks = await db.collection('Tasks').find(query).toArray();
-      res.status(200).json(tasks);
+    const tasks = await db.collection('Tasks').find(query).toArray();
+    res.status(200).json(tasks);
   } catch (error) {
-      console.error('Error fetching tasks:', error);
-      res.status(500).send('Internal Server Error');
+    console.error('Error fetching tasks:', error);
+    res.status(500).send('Internal Server Error');
   }
 });
 

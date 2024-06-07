@@ -15,7 +15,20 @@ export class TaskController {
     const storyId = sessionStorage.getItem('activeStoryId');
     if (!storyId) return;
 
-    const response = await fetch(`http://localhost:3000/tasks?storyId=${storyId}`);
+    const userRole = this.getUserRole();
+    const userId = this.getUserId();
+
+    const isDeveloper = userRole === "Developer";
+    console.log(isDeveloper);
+
+    let url;
+    if (isDeveloper) {
+      url = `http://localhost:3000/tasks?userId=${userId}&storyId=${storyId}`;
+    } else {
+      url = `http://localhost:3000/tasks?storyId=${storyId}`;
+    }
+  
+    const response = await fetch(url);
     const tasks: Task[] = await response.json();
 
     console.log(tasks);
@@ -57,6 +70,14 @@ export class TaskController {
 
 public async saveTask(event: Event) {
   event.preventDefault();
+
+  // Check if user has permission to add tasks
+  const userRole = this.getUserRole();
+  if (userRole !== "Admin") {
+      alert('You do not have permission to add tasks');
+      return;
+  }
+  
   const idInput = document.getElementById("task-id") as HTMLInputElement;
   const nameInput = document.getElementById("task-name") as HTMLInputElement;
   const descriptionInput = document.getElementById("task-description") as HTMLTextAreaElement;
@@ -70,6 +91,7 @@ public async saveTask(event: Event) {
       return;
   }
 
+  
   const task: Task = {
       name: nameInput.value,
       description: descriptionInput.value,
@@ -187,7 +209,6 @@ public async showTaskDetails(taskId: string) {
   }
 }
 
-
   // Helper methods
   public changeTaskDetailsVisibility() {
     const modalElement = document.getElementById("taskDetailsModal");
@@ -198,8 +219,6 @@ public async showTaskDetails(taskId: string) {
       modal.hide();
     }
   }
-
-
 
   private async populateUserDropdown(selectElement: HTMLSelectElement) {
     const users = await UserController.getUsers();
@@ -214,6 +233,13 @@ public async showTaskDetails(taskId: string) {
 }
 
   public async assignUser(taskId: string) {
+    // Check if user has permission to assign tasks
+    const userRole = this.getUserRole();
+    if (userRole !== "DevOps") {
+        alert("You do not have permission to assign tasks");
+        return;
+    }
+
     const response = await fetch(`http://localhost:3000/tasks/${taskId}`);
     const task: Task = await response.json();
     const userSelect = document.getElementById("user-select") as HTMLSelectElement;
@@ -286,6 +312,22 @@ public async showTaskDetails(taskId: string) {
     prioritySelect.value = "Low";
     statusSelect.value = "Todo";
     estimatedTimeInput.value = "";
+  }
+
+  private getUserRole() {
+    const userRole = sessionStorage.getItem("userRole");
+    if (userRole) {
+      return userRole.replace(/"/g, '').trim(); // Remove quotes
+    }
+    return "";
+  }
+
+  private getUserId() {
+    const userId = sessionStorage.getItem("userId");
+    if (userId) {
+      return userId.replace(/"/g, '').trim(); // Remove quotes
+    }
+    return "";
   }
 
   // Notification counter

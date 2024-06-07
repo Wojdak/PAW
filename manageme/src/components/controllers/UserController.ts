@@ -46,6 +46,8 @@ export class UserController {
     sessionStorage.setItem("token", data.token);
     sessionStorage.setItem("refreshToken", data.refreshToken);
     sessionStorage.setItem("userData", JSON.stringify(data.user));
+    sessionStorage.setItem("userRole", JSON.stringify(data.user.role));
+    sessionStorage.setItem("userId", JSON.stringify(data.user._id));
 
     this.toggleLoginFormVisibility(false);
     this.toggleProjectSection(true);
@@ -61,9 +63,9 @@ export class UserController {
       const user = JSON.parse(decodeURIComponent(userData));
       sessionStorage.setItem("userData", userData);
       sessionStorage.setItem("username", user.username);
-      sessionStorage.setItem("email", user.email);
-      sessionStorage.setItem("token", user.aToken);
-      sessionStorage.setItem("refreshToken", user.rToken);
+      sessionStorage.setItem("userRole", user.role);
+      sessionStorage.setItem("userId", user._id);
+      sessionStorage.setItem("token", user.token);
       this.updateUsernameDisplay();
       this.toggleLoginFormVisibility(false);
       this.toggleProjectSection(true);
@@ -99,12 +101,23 @@ export class UserController {
   }
 
   static logout() {
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("refreshToken");
-    sessionStorage.removeItem("userData");
-    this.toggleLoginFormVisibility(true);
-    this.toggleProjectSection(false);
-    window.location.href = "http://localhost:5173";
+    // Clear client-side session storage
+    sessionStorage.clear();
+  
+    // Send a request to the server to clear the server-side session
+    fetch('http://localhost:3000/logout', {
+      method: 'GET',
+      credentials: 'include' // Ensure cookies are sent with the request
+    })
+    .then(() => {
+      this.toggleLoginFormVisibility(true);
+      this.toggleProjectSection(false);
+      window.location.href = "http://localhost:5173";
+    })
+    .catch(error => {
+      console.error('Error during logout:', error);
+      alert('Failed to log out properly. Please try again.');
+    });
   }
 
   static toggleLoginFormVisibility(show: boolean) {
