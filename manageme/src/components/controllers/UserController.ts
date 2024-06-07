@@ -1,25 +1,9 @@
-import { User } from "../models/UserModel";
 import { ProjectController } from "./ProjectController";
 
 export class UserController {
-  static projectController = new ProjectController();
+  private projectController = new ProjectController();
 
-  static getLoggedInUser(): User | null {
-    const userData = sessionStorage.getItem("userData");
-    if (userData) {
-      console.log(userData);
-      return JSON.parse(userData) as User;
-    }
-    return null;
-  }
-
-  static async getUsers(): Promise<User[]> {
-    const response = await fetch("http://localhost:3000/users");
-    const users: User[] = await response.json();
-    return users;
-  }
-
-  static async loginUser(event: Event) {
+  public async loginUser(event: Event) {
     event.preventDefault();
     const username = (
       document.getElementById("login-username") as HTMLInputElement
@@ -28,7 +12,7 @@ export class UserController {
       document.getElementById("login-password") as HTMLInputElement
     ).value;
 
-    const response = await fetch("http://localhost:3000/login", {
+    const response = await fetch("http://localhost:3000/auth/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -54,11 +38,11 @@ export class UserController {
     this.updateUsernameDisplay();
   }
 
-  static async loginUserGoogle() {
+  public async loginUserGoogle() {
     window.location.href = "http://localhost:3000/auth/google";
   }
 
-  static processGoogleLogin(userData: string) {
+  public processGoogleLogin(userData: string) {
     try {
       const user = JSON.parse(decodeURIComponent(userData));
       sessionStorage.setItem("userData", userData);
@@ -74,10 +58,10 @@ export class UserController {
     }
   }
 
-  static checkAuthOnLoad() {
+  public checkAuthOnLoad() {
     const token = sessionStorage.getItem("token");
     if (token) {
-      fetch("http://localhost:3000/validate-token", {
+      fetch("http://localhost:3000/auth/validate-token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -100,12 +84,12 @@ export class UserController {
     }
   }
 
-  static logout() {
+  public logout() {
     // Clear client-side session storage
     sessionStorage.clear();
   
     // Send a request to the server to clear the server-side session
-    fetch('http://localhost:3000/logout', {
+    fetch('http://localhost:3000/auth/logout', {
       method: 'GET',
       credentials: 'include' // Ensure cookies are sent with the request
     })
@@ -120,7 +104,7 @@ export class UserController {
     });
   }
 
-  static toggleLoginFormVisibility(show: boolean) {
+  private toggleLoginFormVisibility(show: boolean) {
     const loginSection = document.getElementById("login-section");
     if (loginSection === null) return;
 
@@ -131,14 +115,14 @@ export class UserController {
     }
   }
 
-  static toggleProjectSection(show: boolean) {
+  private toggleProjectSection(show: boolean) {
     const projectSection = document.getElementById("project-section");
     if (projectSection == null) return;
     projectSection.style.display = show ? "block" : "none";
     this.projectController.renderProjects();
   }
 
-  static updateUsernameDisplay() {
+  public updateUsernameDisplay() {
     const userData = sessionStorage.getItem("userData");
     if (userData) {
       const user = JSON.parse(userData);

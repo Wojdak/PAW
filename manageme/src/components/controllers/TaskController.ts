@@ -1,7 +1,7 @@
 import { Task } from "../models/TaskModel";
-import { UserController } from "./UserController";
 import * as bootstrap from "bootstrap";
 import { NotificationService } from "../services/NotificationService";
+import { User } from "../models/UserModel";
 
 export class TaskController {
   private notificationService: NotificationService;
@@ -15,8 +15,8 @@ export class TaskController {
     const storyId = sessionStorage.getItem('activeStoryId');
     if (!storyId) return;
 
-    const userRole = this.getUserRole();
-    const userId = this.getUserId();
+    const userRole = this.getUserRoleFromSessionStorage();
+    const userId = this.getUserIdFromSessionStorage();
 
     const isDeveloper = userRole === "Developer";
     console.log(isDeveloper);
@@ -72,7 +72,7 @@ public async saveTask(event: Event) {
   event.preventDefault();
 
   // Check if user has permission to add tasks
-  const userRole = this.getUserRole();
+  const userRole = this.getUserRoleFromSessionStorage();
   if (userRole !== "Admin") {
       alert('You do not have permission to add tasks');
       return;
@@ -158,13 +158,19 @@ public async showTaskDetails(taskId: string) {
   const detailsContainer = modalElement?.querySelector(".modal-body");
   if (!detailsContainer) return;
 
+  let assignedUser = { username: "None" }; // Default user object with "None" as username
+
+  if (task.userId) {
+    assignedUser = await this.getUser(task.userId);
+  }
+
   detailsContainer.innerHTML = `
       <h2>Task Details: ${task.name}</h2>
       <p>Description: ${task.description}</p>
       <p>Priority: ${task.priority}</p>
       <p>Status: ${task.state}</p>
       <p>Estimated Time: ${task.estimatedTime} hours</p>
-      <p>Assigned to: ${task.userId || "None"}</p>
+      <p>Assigned to: ${assignedUser.username || "None"}</p>
       <p>Start date: ${task.startDate ? new Date(task.startDate).toLocaleDateString() : "None"}</p>
       <p>End date: ${task.endDate ? new Date(task.endDate).toLocaleDateString() : "None"}</p>
   `;
@@ -221,7 +227,7 @@ public async showTaskDetails(taskId: string) {
   }
 
   private async populateUserDropdown(selectElement: HTMLSelectElement) {
-    const users = await UserController.getUsers();
+    const users = await this.getUsers() as User[];
     users.forEach((user) => {
         if (user.role !== "Admin") {
             const option = document.createElement("option");
@@ -234,7 +240,7 @@ public async showTaskDetails(taskId: string) {
 
   public async assignUser(taskId: string) {
     // Check if user has permission to assign tasks
-    const userRole = this.getUserRole();
+    const userRole = this.getUserRoleFromSessionStorage();
     if (userRole !== "DevOps") {
         alert("You do not have permission to assign tasks");
         return;
@@ -288,6 +294,11 @@ public async showTaskDetails(taskId: string) {
     if (taskForm) {
       taskForm.addEventListener("submit", (event) => this.saveTask(event));
     }
+
+    const backToStoriesBtn = document.getElementById("back-to-stories-btn");
+    if (backToStoriesBtn) {
+      backToStoriesBtn.addEventListener("click", () => this.goBackToStories());
+    }
   }
 
   private resetForm() {
@@ -314,7 +325,33 @@ public async showTaskDetails(taskId: string) {
     estimatedTimeInput.value = "";
   }
 
-  private getUserRole() {
+  // Navigation methods
+  public goBackToStories() {
+    this.toggleTaskVisibility(false);
+    const storySection = document.getElementById("story-section");
+    if (storySection == null) return;
+    storySection.style.display = "block";
+  }
+
+  public toggleTaskVisibility(show: boolean) {
+    const taskSection = document.getElementById("task-section");
+    if (taskSection == null) return;
+    taskSection.style.display = show ? "block" : "none";
+  }
+
+  private async getUsers() {
+    const response = await fetch("http://localhost:3000/auth/users");
+    const users: User[] = await response.json();
+    return users;
+  }
+
+  public async getUser(id: string): Promise<User> {
+    const response = await fetch(`http://localhost:3000/auth/users/${id}`);
+    const user: User = await response.json();
+    return user;
+  }
+
+  private getUserRoleFromSessionStorage() {
     const userRole = sessionStorage.getItem("userRole");
     if (userRole) {
       return userRole.replace(/"/g, '').trim(); // Remove quotes
@@ -322,7 +359,7 @@ public async showTaskDetails(taskId: string) {
     return "";
   }
 
-  private getUserId() {
+  private getUserIdFromSessionStorage() {
     const userId = sessionStorage.getItem("userId");
     if (userId) {
       return userId.replace(/"/g, '').trim(); // Remove quotes

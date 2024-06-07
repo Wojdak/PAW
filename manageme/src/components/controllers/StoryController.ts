@@ -1,7 +1,7 @@
 // src/controllers/StoryController.ts
 import { Story } from "../models/StoryModel";
-import { UserController } from "./UserController";
 import { TaskController } from "./TaskController";
+import { User } from "../models/UserModel";
 
 export class StoryController {
   private taskController = new TaskController();
@@ -14,6 +14,7 @@ export class StoryController {
 
   public async renderStories() {
     const projectId = sessionStorage.getItem('activeProjectId');
+    console.log(projectId);
     if (!projectId) return;
 
     const response = await fetch(`http://localhost:3000/stories?projectId=${projectId}`);
@@ -72,8 +73,7 @@ public async saveStory(event: Event) {
       alert('No active project selected');
       return;
   }
-  console.log(this.getCurrentUser()._id!);
-
+  
   const story: Story = {
       name: nameInput.value,
       description: descriptionInput.value,
@@ -150,6 +150,11 @@ public async deleteStory(id: string) {
     if (storyForm) {
       storyForm.addEventListener("submit", (event) => this.saveStory(event));
     }
+
+    const backToProjectsBtn = document.getElementById("back-to-projects-btn");
+    if (backToProjectsBtn) {
+      backToProjectsBtn.addEventListener("click", () => this.goBackToProjects());
+    }
   }
 
   private setupFilterChangeListener() {
@@ -160,13 +165,12 @@ public async deleteStory(id: string) {
   }
 
   private getCurrentUser() {
-    const user = UserController.getLoggedInUser();
-
-    if(!user) {
-      throw new Error('No user logged in');
+    const userData = sessionStorage.getItem("userData");
+    if (!userData) {
+      throw new Error("User not logged in");
+      
     }
-
-    return user;
+    return JSON.parse(userData) as User;
   }
 
   // Display Tasks
@@ -189,4 +193,10 @@ public async deleteStory(id: string) {
     taskSection.style.display = show ? "block" : "none";
   }
 
+  public goBackToProjects() {
+    this.toggleStoryVisibility(false);
+    const projectSection = document.getElementById("project-section");
+    if (projectSection == null) return;
+    projectSection.style.display = "block";
+  }
 }
